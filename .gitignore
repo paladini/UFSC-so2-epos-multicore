@@ -1,0 +1,22 @@
+
+#compiled files
+*.o
+*.img
+*.out
+*.conf
+
+#folders
+bin/*
+lib/*
+img/*
+tools/*
+src/setup/*
+src/boot/*
+src/architecture/ia32/*
+include/system/*
+
+#binary/generated
+app/philosophers_dinner
+app/philosophers_dinner_traits.h
+app/producer_consumer
+app/producer_consumer_traits.h
