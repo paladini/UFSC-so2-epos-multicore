@@ -14,8 +14,7 @@ class Synchronizer_Common
 protected:
     Synchronizer_Common() {}
 
-    // não consegui pensar em outra coisa que não usar essa variável, mas é uma solução paliativa.
-    Thread* temp; 
+    Thread* thread; 
 
     // Atomic operations
     bool tsl(volatile bool & lock) { return CPU::tsl(lock); }
@@ -26,20 +25,17 @@ protected:
     void begin_atomic() { Thread::lock(); }
     void end_atomic() { Thread::unlock(); }
 
-    // Guto disse que não seria só isso, mas que é um bom começo.
     void sleep() 
     { 
-        //Thread* running = Thread::running();
-        //running->suspend();
-        temp = Thread::running();
-        temp->suspend();
-        //Thread::yield(); 
+        thread = Thread::running();
+        thread->suspend();
     } // implicit unlock()
     
     void wakeup() 
     {
-        temp->resume(); // guto deu aviso para tomar cuidado com esse método.
+        thread->resume();
         end_atomic(); 
+        Thread::reschedule();
     }
 
     void wakeup_all() 
@@ -49,6 +45,7 @@ protected:
             suspended->object()->resume();   
         }
         end_atomic(); 
+        Thread::reschedule();
     }
 };
 
