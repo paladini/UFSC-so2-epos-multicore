@@ -1,4 +1,3 @@
-
 #compiled files
 *.o
 *.img
@@ -7,6 +6,14 @@
 #generated
 src/architecture/ia32/ia32_crt0.s
 lib/*
+
+#with internal gitignore
+#bin/*
+#img/*
+#tools/*
+#src/setup/*
+#src/boot/*
+
 
 #binary/generated
 app/philosophers_dinner
