@@ -1,0 +1,4 @@
+*
+!.gitignore
+!makefile
+!pc_setup.cc
