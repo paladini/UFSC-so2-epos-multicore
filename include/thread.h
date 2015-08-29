@@ -92,6 +92,10 @@ protected:
     static void unlock() { CPU::int_enable(); }
     static bool locked() { return CPU::int_enabled(); }
 
+    static void sleep(Queue * q);
+    static void wakeup(Queue * q);
+    static void wakeup_all(Queue * q);
+
     static void reschedule();
     static void time_slicer(const IC::Interrupt_Id & interrupt);
 
@@ -101,6 +105,7 @@ protected:
 
 private:
     static void init();
+    static void wakeupThread(Queue* queue);
 
 protected:
     char * _stack;

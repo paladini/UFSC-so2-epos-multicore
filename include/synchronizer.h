@@ -22,9 +22,18 @@ protected:
     void begin_atomic() { Thread::lock(); }
     void end_atomic() { Thread::unlock(); }
 
-    void sleep() { Thread::yield(); } // implicit unlock()
-    void wakeup() { end_atomic(); }
-    void wakeup_all() { end_atomic(); }
+    void sleep() { 
+        Thread::sleep(queue);
+    } // implicit unlock()
+    void wakeup() { 
+        Thread::wakeup(queue);
+    }
+    void wakeup_all() { 
+        Thread::wakeup_all(queue);
+    }
+
+private:
+    Thread::Queue * queue;
 };
 
 __END_SYS
