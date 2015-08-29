@@ -3,12 +3,11 @@
 *.o
 *.img
 *.out
-*.conf
 
 #folders
 
 src/architecture/ia32/*
-include/system/*
+#include/system/*
 
 #binary/generated
 app/philosophers_dinner
