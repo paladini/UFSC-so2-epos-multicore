@@ -244,6 +244,8 @@ int Thread::idle()
 void Thread::sleep(Queue* queue){
     lock();
 
+    db<Thread>(TRC) << "Thread::sleep(running=" << running() << ", queue=" << queue << ")" << endl;
+
     Thread* _running = running();
     _running->_state = WAITING;  
     queue->insert(&_running->_link);
@@ -262,6 +264,8 @@ void Thread::sleep(Queue* queue){
 void Thread::wakeup(Queue* queue){
     lock();
 
+    db<Thread>(TRC) << "Thread::wakeup(running=" << running() << ", queue=" << queue << ")" << endl;
+
     if(!queue->empty()) {
         Thread::wakeupThread(queue);
     }
@@ -274,6 +278,8 @@ void Thread::wakeup(Queue* queue){
 
 void Thread::wakeup_all(Queue * queue){
     lock();
+
+    db<Thread>(TRC) << "Thread::wakeup_all(running=" << running() << ", queue=" << queue << ")" << endl;
 
     while(!queue->empty()) {
         Thread::wakeupThread(queue);

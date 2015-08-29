@@ -23,17 +23,17 @@ protected:
     void end_atomic() { Thread::unlock(); }
 
     void sleep() { 
-        Thread::sleep(queue);
+        Thread::sleep(&queue);
     } // implicit unlock()
     void wakeup() { 
-        Thread::wakeup(queue);
+        Thread::wakeup(&queue);
     }
     void wakeup_all() { 
-        Thread::wakeup_all(queue);
+        Thread::wakeup_all(&queue);
     }
 
 private:
-    Thread::Queue * queue;
+    Thread::Queue queue;
 };
 
 __END_SYS

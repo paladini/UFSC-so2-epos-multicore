@@ -11,7 +11,7 @@ using namespace EPOS;
 
 const int iterations = 10;
 
-Mutex table;
+Semaphore table;
 
 Thread * phil[5];
 Semaphore * chopstick[5];
@@ -25,20 +25,20 @@ int philosopher(int n, int l, int c)
 
     for(int i = iterations; i > 0; i--) {
 
-        table.lock();
+        table.p();
         Display::position(l, c);
         cout << "thinking";
-        table.unlock();
+        table.v();
 
         Delay thinking(2000000);
 
         chopstick[first]->p();   // get first chopstick
         chopstick[second]->p();   // get second chopstick
 
-        table.lock();
+        table.p();
         Display::position(l, c);
         cout << " eating ";
-        table.unlock();
+        table.v();
 
         Delay eating(1000000);
 
@@ -46,17 +46,17 @@ int philosopher(int n, int l, int c)
         chopstick[second]->v();   // release second chopstick
     }
 
-    table.lock();
+    table.p();
     Display::position(l, c);
     cout << "  done  ";
-    table.unlock();
+    table.v();
 
     return iterations;
 }
 
 int main()
 {
-    table.lock();
+    table.p();
     Display::clear();
     Display::position(0, 0);
     cout << "The Philosopher's Dinner:" << endl;
@@ -85,14 +85,15 @@ int main()
     Display::position(19, 0);
 
     cout << "The dinner is served ..." << endl;
-    table.unlock();
+    table.v();
 
     for(int i = 0; i < 5; i++) {
+        Delay init(1000000);
         int ret = phil[i]->join();
-        table.lock();
+        table.p();
         Display::position(20 + i, 0);
         cout << "Philosopher " << i << " ate " << ret << " times " << endl;
-        table.unlock();
+        table.v();
     }
 
     for(int i = 0; i < 5; i++)
