@@ -6,7 +6,7 @@
 
 #generated
 src/architecture/ia32/ia32_crt0.s
-#include/system/*
+lib/*
 
 #binary/generated
 app/philosophers_dinner
