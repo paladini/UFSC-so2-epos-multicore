@@ -4,9 +4,8 @@
 *.img
 *.out
 
-#folders
-
-src/architecture/ia32/*
+#generated
+src/architecture/ia32/ia32_crt0.s
 #include/system/*
 
 #binary/generated
