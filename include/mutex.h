@@ -3,6 +3,7 @@
 #ifndef __mutex_h
 #define __mutex_h
 
+#include <semaphore.h>
 #include <synchronizer.h>
 
 __BEGIN_SYS
@@ -17,7 +18,7 @@ public:
     void unlock();
 
 private:
-    volatile bool _locked;
+    Semaphore sem;
 };
 
 __END_SYS
