@@ -14,7 +14,8 @@ class Synchronizer_Common
 protected:
     Synchronizer_Common() {}
 
-    Thread* temp;
+    // não consegui pensar em outra coisa que não usar essa variável, mas é uma solução paliativa.
+    Thread* temp; 
 
     // Atomic operations
     bool tsl(volatile bool & lock) { return CPU::tsl(lock); }
@@ -29,6 +30,7 @@ protected:
     void sleep() 
     { 
         //Thread* running = Thread::running();
+        //running->suspend();
         temp = Thread::running();
         temp->suspend();
         //Thread::yield(); 
@@ -36,20 +38,16 @@ protected:
     
     void wakeup() 
     {
-        temp->resume();
-        //Thread::resume(); // guto deu aviso para tomar cuidado com esse método.
-        Thread::reschedule();
+        temp->resume(); // guto deu aviso para tomar cuidado com esse método.
         end_atomic(); 
     }
 
     void wakeup_all() 
     {
-        // for(unsigned int i = 0; i < Thread::_suspended.size(); i++) {
-        //     //Queue::Element* suspended = Thread::_suspended.head();
-        //     //suspended->resume();   
-        //     (Thread::_suspended.head())->resume();                 
-        // }
-        // Thread::reschedule();
+        for(unsigned int i = 0; i < Thread::_suspended.size(); i++) {
+            Thread::Queue::Element* suspended = Thread::_suspended.head();
+            suspended->object()->resume();   
+        }
         end_atomic(); 
     }
 };
