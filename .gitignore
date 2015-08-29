@@ -6,12 +6,7 @@
 *.conf
 
 #folders
-bin/*
-lib/*
-img/*
-tools/*
-src/setup/*
-src/boot/*
+
 src/architecture/ia32/*
 include/system/*
 
