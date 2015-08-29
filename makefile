@@ -76,6 +76,7 @@ else
 endif
 
 clean1: FORCE
+		mkdir -p $(LIB)
 		(cd etc && $(MAKECLEAN))
 		(cd app && $(MAKECLEAN))
 		(cd img && $(MAKECLEAN))
@@ -83,6 +84,7 @@ clean1: FORCE
 		find $(LIB) -maxdepth 1 -type f -exec $(CLEAN) {} \;
 		
 veryclean: clean
+		mkdir -p $(LIB)
 		(cd tools && $(MAKECLEAN))
 		find $(LIB) -maxdepth 1 -type f -exec $(CLEAN) {} \;
 		find $(BIN) -maxdepth 1 -type f -exec $(CLEAN) {} \;
