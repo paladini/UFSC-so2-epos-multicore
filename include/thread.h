@@ -49,8 +49,6 @@ public:
     };
 
     // Thread Configuration
-    // Só vai existir em tempo de compilação, não vai ocupar memória, etc.
-    // Não vai gerar overhead nenhum.
     struct Configuration {
         Configuration(const State & s = READY, const Priority & p = NORMAL, unsigned int ss = STACK_SIZE)
         : state(s), priority(p), stack_size(ss) {}

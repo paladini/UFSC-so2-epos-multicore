@@ -8,18 +8,8 @@
 #include <display.h>
 
 using namespace EPOS;
-// Possível resolução: colocar o estado da thread p/ "suspended" (thread.h) e colocar ela numa fila de threads suspendidas (aparentemente já tem em thread.h). Quando for acordada, tirar da fila. 
-// Enunciado: tirar o pseudo-busy-waiting da implementação do semáfaro e sbustituir por um full-idle-waiting.
-//
-// Pesquisar os "..." em thread.h. C++11 é extremamente diferente de C++98. 
-//
-// Tanto sleep quanto wakeup são chamados pelo Mutex e pelo semáfaro internamente. 
-//
-// # Dicas:
-// 1) Fazer a solução
-// 2) Substituir mutex por semáforo e então descobrir o pq do programa travar com essa substituição.
 
-const int iterations = 2;
+const int iterations = 10;
 
 Semaphore table;
 
@@ -74,7 +64,6 @@ int main()
     for(int i = 0; i < 5; i++)
         chopstick[i] = new Semaphore;
 
-    // Delay test(10000000); // test
     phil[0] = new Thread(&philosopher, 0,  5, 32);
     phil[1] = new Thread(&philosopher, 1, 10, 44);
     phil[2] = new Thread(&philosopher, 2, 16, 39);

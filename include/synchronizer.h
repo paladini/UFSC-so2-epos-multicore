@@ -5,7 +5,6 @@
 
 #include <cpu.h>
 #include <thread.h>
-#include <utility/queue.h>
 
 __BEGIN_SYS
 

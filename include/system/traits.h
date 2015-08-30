@@ -10,7 +10,7 @@ template<typename T>
 struct Traits
 {
     static const bool enabled = true;
-    static const bool debugged = false;
+    static const bool debugged = true;
     static const bool hysterically_debugged = false;
 };
 
@@ -38,8 +38,8 @@ template<> struct Traits<Debug>
 {
     static const bool error   = true;
     static const bool warning = true;
-    static const bool info    = true;
-    static const bool trace   = true;
+    static const bool info    = false;
+    static const bool trace   = false;
 };
 
 template<> struct Traits<Lists>: public Traits<void>
