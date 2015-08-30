@@ -24,12 +24,14 @@ protected:
 
     void sleep() 
     { 
+        Thread* to_be_suspended = Thread::running();
+        _temp.insert(&to_be_suspended->_link);
         Thread::running()->suspend();
     } // implicit unlock()
     
     void wakeup() 
     {
-        if (Thread::Queue::Element* suspended = Thread::_suspended.head()) {
+        if (Thread::Queue::Element* suspended = _temp.remove()) {
             suspended->object()->resume();
         }
         Thread::reschedule();
@@ -37,12 +39,15 @@ protected:
 
     void wakeup_all() 
     {
-        for (unsigned int i = 0; i < Thread::_suspended.size(); ++i) {
-            Thread::Queue::Element* suspended = Thread::_suspended.head();
-            suspended->object()->resume();   
+        for (unsigned int i = 0; i < _temp.size(); ++i) {
+            // Thread::Queue::Element* suspended = temp.head();
+            _temp.remove()->object()->resume();   
         }
         Thread::reschedule();
     }
+
+private:
+    Thread::Queue _temp;
 };
 
 __END_SYS

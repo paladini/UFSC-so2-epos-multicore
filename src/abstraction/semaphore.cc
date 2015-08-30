@@ -31,7 +31,7 @@ void Semaphore::v()
     db<Synchronizer>(TRC) << "Semaphore::v(this=" << this << ",value=" << _value << ")" << endl;
 
     finc(_value);
-    if(_value >= 0)
+    if(_value < 1)
         wakeup();
 }
 
