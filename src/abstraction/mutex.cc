@@ -4,7 +4,7 @@
 
 __BEGIN_SYS
 
-Mutex::Mutex(): sem(1)
+Mutex::Mutex(): _locked(false)
 {
     db<Synchronizer>(TRC) << "Mutex() => " << this << endl;
 }
@@ -20,7 +20,14 @@ void Mutex::lock()
 {
     db<Synchronizer>(TRC) << "Mutex::lock(this=" << this << ")" << endl;
 
-	sem.p();
+	begin_atomic();
+	if (tsl(_locked)) {
+		while (tsl(_locked)) {
+			sleep();
+		}
+	} else {
+		end_atomic();
+	}
 }
 
 
@@ -28,7 +35,9 @@ void Mutex::unlock()
 {
     db<Synchronizer>(TRC) << "Mutex::unlock(this=" << this << ")" << endl;
 
-	sem.v();
+	begin_atomic();
+	_locked = false;
+	wakeup_all();
 }
 
 __END_SYS
