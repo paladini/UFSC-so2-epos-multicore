@@ -33,10 +33,10 @@ protected:
     
     void wakeup() 
     {
-    if (!Thread::_suspended.empty()) {
-        Thread::Queue::Element* suspended = Thread::_suspended.head();
-        suspended->object()->resume();
-    }
+        if (!Thread::_suspended.empty()) {
+            Thread::Queue::Element* suspended = Thread::_suspended.head();
+            suspended->object()->resume();
+        }
         end_atomic(); 
         Thread::reschedule();
     }
