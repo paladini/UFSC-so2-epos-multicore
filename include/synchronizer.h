@@ -14,8 +14,6 @@ class Synchronizer_Common
 protected:
     Synchronizer_Common() {}
 
-    Thread* thread; 
-
     // Atomic operations
     bool tsl(volatile bool & lock) { return CPU::tsl(lock); }
     int finc(volatile int & number) { return CPU::finc(number); }
@@ -27,8 +25,7 @@ protected:
 
     void sleep() 
     { 
-        thread = Thread::running();
-        thread->suspend();
+        Thread::running()->suspend();
     } // implicit unlock()
     
     void wakeup() 
