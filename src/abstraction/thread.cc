@@ -241,62 +241,6 @@ int Thread::idle()
     return 0;
 }
 
-void Thread::sleep(Queue* queue){
-    lock();
-
-    db<Thread>(TRC) << "Thread::sleep(running=" << running() << ", queue=" << queue << ")" << endl;
-
-    Thread* _running = running();
-    _running->_state = WAITING;  
-    queue->insert(&_running->_link);
-
-    if(!_ready.empty()) {
-        Thread* next = _ready.remove()->object();
-        next->_state = RUNNING;
-        dispatch(_running, next);
-    } else {
-        idle();
-    }
-
-    unlock();
-}
-
-void Thread::wakeup(Queue* queue){
-    lock();
-
-    db<Thread>(TRC) << "Thread::wakeup(running=" << running() << ", queue=" << queue << ")" << endl;
-
-    if(!queue->empty()) {
-        Thread::wakeupThread(queue);
-    }
-
-    unlock();
-
-    if(preemptive)
-        reschedule();
-}
-
-void Thread::wakeup_all(Queue * queue){
-    lock();
-
-    db<Thread>(TRC) << "Thread::wakeup_all(running=" << running() << ", queue=" << queue << ")" << endl;
-
-    while(!queue->empty()) {
-        Thread::wakeupThread(queue);
-    }
-
-    unlock();
-
-    if(preemptive)
-        reschedule();
-}
-
-void Thread::wakeupThread(Queue * queue){
-    Thread* syncThread = queue->remove()->object();
-    syncThread->_state = READY;
-    _ready.insert(&syncThread->_link);
-}
-
 __END_SYS
 
 // Id forwarder to the spin lock
