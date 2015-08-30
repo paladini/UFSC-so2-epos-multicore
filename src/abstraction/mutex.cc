@@ -37,7 +37,7 @@ void Mutex::unlock()
 
 	begin_atomic();
 	_locked = false;
-	wakeup_all();
+	wakeup();
 }
 
 __END_SYS
