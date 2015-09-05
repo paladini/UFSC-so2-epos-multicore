@@ -98,6 +98,7 @@ protected:
     static void dispatch(Thread * prev, Thread * next);
 
     static int idle();
+    static void addAllToReady(Queue* queue);
 
 private:
     static void init();
@@ -114,6 +115,7 @@ private:
     static Thread * volatile _running;
     static Queue _ready;
     static Queue _suspended;
+    Queue joined;
 };
 
 
