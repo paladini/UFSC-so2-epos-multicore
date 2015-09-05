@@ -183,7 +183,11 @@ void Thread::exit(int status)
 
     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
 
-    addAllToReady(&_running->joined);
+	Thread * prev = _running;
+	prev->_state = FINISHING;
+	*reinterpret_cast<int *>(prev->_stack) = status;
+
+    addAllToReady(&prev->joined);
 
     while(_ready.empty() && !_suspended.empty())
         idle(); // implicit unlock();
@@ -191,13 +195,8 @@ void Thread::exit(int status)
     lock();
 
     if(!_ready.empty()) {
-        Thread * prev = _running;
-        prev->_state = FINISHING;
-        *reinterpret_cast<int *>(prev->_stack) = status;
-
         _running = _ready.remove()->object();
         _running->_state = RUNNING;
-
         dispatch(prev, _running);
     } else {
         db<Thread>(WRN) << "The last thread in the system has exited!" << endl;
