@@ -68,12 +68,10 @@ Thread::~Thread()
 }
 
 void Thread::addAllToReady(Queue* queue){
-	if(queue){
+	while(!queue->empty()){
 		Thread* resume = queue->remove()->object();
-		while(resume){
-			resume->_state = READY;
-			_ready.insert(&resume->_link);
-		}
+		resume->_state = READY;
+		_ready.insert(&resume->_link);
 	}
 }
 
