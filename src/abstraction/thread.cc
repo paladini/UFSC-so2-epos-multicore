@@ -26,7 +26,6 @@ void Thread::constructor_prolog(unsigned int stack_size)
     _stack = reinterpret_cast<char *>(kmalloc(stack_size));
 }
 
-
 void Thread::constructor_epilog(const Log_Addr & entry, unsigned int stack_size)
 {
     db<Thread>(TRC) << "Thread(entry=" << entry
@@ -61,11 +60,22 @@ Thread::~Thread()
     _ready.remove(this);
     _suspended.remove(this);
 
+    addAllToReady(&joined);
+
     unlock();
 
     kfree(_stack);
 }
 
+void Thread::addAllToReady(Queue* queue){
+	if(queue){
+		Thread* resume = queue->remove()->object();
+		while(resume){
+			resume->_state = READY;
+			_ready.insert(&resume->_link);
+		}
+	}
+}
 
 int Thread::join()
 {
@@ -73,10 +83,16 @@ int Thread::join()
 
     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
 
-    while(_state != FINISHING)
-        yield(); // implicit unlock()
+    if(_running != this && _state != FINISHING){
+    	Thread* prev = _running;
+    	prev->_state = WAITING;
+    	joined.insert(&prev->_link);
 
-    unlock();
+    	_running = _ready.remove()->object();
+		dispatch(prev, _running);
+    }else{
+    	unlock();
+    }
 
     return *reinterpret_cast<int *>(_stack);
 }
@@ -168,6 +184,8 @@ void Thread::exit(int status)
     lock();
 
     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
+
+    addAllToReady(&_running->joined);
 
     while(_ready.empty() && !_suspended.empty())
         idle(); // implicit unlock();
