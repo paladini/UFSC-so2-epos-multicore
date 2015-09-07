@@ -66,15 +66,18 @@ Thread::~Thread()
     kfree(_stack);
 }
 
-
+// https://computing.llnl.gov/tutorials/pthreads/
+// http://stackoverflow.com/questions/6979796/what-are-the-main-uses-of-yield-and-how-does-it-differ-from-join-and-interr
 int Thread::join()
 {
     lock();
 
     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
 
-    while(_state != FINISHING)
-        yield(); // implicit unlock()
+    if(_state != FINISHING) {
+        _blocked.insert(&_running->_link);
+        _running->suspend();
+    }
 
     unlock();
 
@@ -168,6 +171,10 @@ void Thread::exit(int status)
     lock();
 
     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
+
+    if(!_running->_blocked.empty())
+        for(unsigned int i = 0; i < _running->_blocked.size(); i++)
+            _running->_blocked.remove()->object()->resume();
 
     while(_ready.empty() && !_suspended.empty())
         idle(); // implicit unlock();

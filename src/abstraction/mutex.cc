@@ -1,4 +1,5 @@
 // EPOS Mutex Abstraction Implementation
+// Mutex não tem requisito de ordenação como no semáfaro, ou seja, não precisa do begin_atomic() ali nos métodos modificados. 
 
 #include <mutex.h>
 

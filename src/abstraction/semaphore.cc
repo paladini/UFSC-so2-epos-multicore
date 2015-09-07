@@ -1,4 +1,5 @@
 // EPOS Semaphore Abstraction Implementation
+// Os métodos precisam ser atômicos (begin_atomic(), end_atomic())
 
 #include <semaphore.h>
 

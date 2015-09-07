@@ -1,4 +1,5 @@
 // EPOS Synchronizer Abstractions Common Package
+// Supostamente uma queue diferente pra mutex e pra semaphore? 
 
 #ifndef __synchronizer_h
 #define __synchronizer_h
@@ -12,6 +13,9 @@ class Synchronizer_Common
 {
 protected:
     Synchronizer_Common() {}
+    
+    // implementar depois
+    ~Synchronizer_Common() {}
 
     // Atomic operations
     bool tsl(volatile bool & lock) { return CPU::tsl(lock); }
