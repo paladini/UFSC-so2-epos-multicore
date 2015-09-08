@@ -4,20 +4,20 @@ There's two basic tests for thread join. Please, compare the output of the
 application with the lines below.
 	
 Test nº 1 should print:
+	Joining 0.
+	Finished 0.
 	Joining 1.
 	Finished 1.
 	Joining 2.
 	Finished 2.
-	Joining 3.
-	Finished 3.
 
 Test nº 2 should print:
-	Joining 3.
-	Finished 3.
 	Joining 2.
 	Finished 2.
 	Joining 1.
 	Finished 1.
+	Joining 0.
+	Finished 0.
 
 Written by Fernando Paladini on 09/07/2015.
 */
