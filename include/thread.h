@@ -115,7 +115,6 @@ private:
     static Queue _ready;
     static Queue _suspended;
     Queue _blocked;
-    // Semaphore* _blocked = new Semaphore(0);
 };
 
 
