@@ -172,9 +172,12 @@ void Thread::exit(int status)
 
     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
 
-    if(!_running->_blocked.empty())
-        for(unsigned int i = 0; i < _running->_blocked.size(); i++)
-            _running->_blocked.remove()->object()->resume();
+    Queue& q = _running->_blocked;
+    if(!q.empty()) {
+        Queue::Element * next;
+        while((next = q.remove()))
+            next->object()->resume();
+    }
 
     while(_ready.empty() && !_suspended.empty())
         idle(); // implicit unlock();
