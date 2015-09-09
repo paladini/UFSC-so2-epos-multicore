@@ -68,6 +68,16 @@ Thread::~Thread()
 
 // https://computing.llnl.gov/tutorials/pthreads/
 // http://stackoverflow.com/questions/6979796/what-are-the-main-uses-of-yield-and-how-does-it-differ-from-join-and-interr
+/*
+TODO: 
+    * Falar no relatório sobre uma thread não poder dar Join em si mesma (implementar isso com assert?)
+    * Tentar pensar em uma solução de join circular (se thread A dá join em B, B não pode dra join em A)
+    * É interessante escrever asserções (assert) pelos motivos falados pelo Guto, ele deve considerar mais isso.
+    * Implementar o(s) destrutor(es) [NÃO ESQUECER] 
+    * NÃO UTILIZAR fila, pois ele vai perder os ponteiros de "next" e "prev" do elemento (caso o _link esteja em mais de uma Queue). Inverter a relação e não utilizar lista, utilizar apenas um atributo Thread dentro da Thread.h.
+
+O EPOS não possui NULL? Wtf.
+*/
 int Thread::join()
 {
     lock();
@@ -75,8 +85,9 @@ int Thread::join()
     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
 
     if(_state != FINISHING) {
-        _blocked.insert(&_running->_link);
+        _running->waiting_for(this);
         _running->suspend();
+        // _blocked.insert(&_running->_link);
     }
 
     unlock();
@@ -172,11 +183,15 @@ void Thread::exit(int status)
 
     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
 
-    Queue& q = _running->_blocked;
-    if(!q.empty()) {
-        Queue::Element * next;
-        while((next = q.remove()))
-            next->object()->resume();
+    if(!_suspended.empty()) {
+        Queue::Element * element = _suspended.head();
+        while((element != _suspended.tail()) || (_suspended.size() == 1)) {
+            if(element->object()->waiting_for() == _running) {
+                element->object()->waiting_for(0);
+                element->object()->resume();
+            }
+            element = element->next();
+        }
     }
 
     while(_ready.empty() && !_suspended.empty())

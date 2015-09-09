@@ -99,6 +99,14 @@ protected:
 
     static int idle();
 
+    Thread* waiting_for() {
+        return _waiting_for;
+    }
+
+    void waiting_for(Thread* thread) {
+        _waiting_for = thread;
+    }
+
 private:
     static void init();
 
@@ -114,7 +122,8 @@ private:
     static Thread * volatile _running;
     static Queue _ready;
     static Queue _suspended;
-    Queue _blocked;
+    Thread * _waiting_for;
+    // Queue _blocked;
 };
 
 
