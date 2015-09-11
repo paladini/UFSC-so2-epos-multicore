@@ -128,13 +128,15 @@ void Thread::suspend()
     _state = SUSPENDED;
     _suspended.insert(&_link);
 
-    if((_running == this) && !_ready.empty()) {
+    //if((_running == this) && !_ready.empty()) {
+    if(_running == this){
         _running = _ready.remove()->object();
         _running->_state = RUNNING;
 
         dispatch(this, _running);
-    } else
-        idle(); // implicit unlock()
+    }
+    //} else
+      //  idle(); // implicit unlock()
 
     unlock();
 }
@@ -161,7 +163,7 @@ void Thread::yield()
 
     db<Thread>(TRC) << "Thread::yield(running=" << _running << ")" << endl;
 
-    if(!_ready.empty()) {
+   // if(!_ready.empty()) {
         Thread * prev = _running;
         prev->_state = READY;
         _ready.insert(&prev->_link);
@@ -170,8 +172,8 @@ void Thread::yield()
         _running->_state = RUNNING;
 
         dispatch(prev, _running);
-    } else
-        idle();
+    //} else
+    //    idle();
 
     unlock();
 }
@@ -189,16 +191,16 @@ void Thread::exit(int status)
 
     addAllToReady(&prev->joined);
 
-    while(_ready.empty() && !_suspended.empty())
-        idle(); // implicit unlock();
+   // while(_ready.empty() && !_suspended.empty())
+    //    idle(); // implicit unlock();
 
     lock();
 
-    if(!_ready.empty()) {
+   // if(!_ready.empty()) {
         _running = _ready.remove()->object();
         _running->_state = RUNNING;
         dispatch(prev, _running);
-    } else {
+    /*} else {
         db<Thread>(WRN) << "The last thread in the system has exited!" << endl;
         if(reboot) {
             db<Thread>(WRN) << "Rebooting the machine ..." << endl;
@@ -207,7 +209,7 @@ void Thread::exit(int status)
             db<Thread>(WRN) << "Halting the CPU ..." << endl;
             CPU::halt();
         }
-    }
+    }*/
 
     unlock();
 }
@@ -245,15 +247,28 @@ void Thread::dispatch(Thread * prev, Thread * next)
 
 int Thread::idle()
 {
-    db<Thread>(TRC) << "Thread::idle()" << endl;
+	while(true) {
+		db<Thread>(TRC) << "Thread::idle()" << endl;
+		CPU::int_disable();
 
-    db<Thread>(INF) << "There are no runnable threads at the moment!" << endl;
-    db<Thread>(INF) << "Halting the CPU ..." << endl;
+		if(!_suspended.empty()) {
+			db<Thread>(INF) << "There are no runnable threads at the moment!" << endl;
+			CPU::int_enable();
+			db<Thread>(INF) << "Halting the CPU ..." << endl;
+			CPU::halt();
+		} else {
+			db<Thread>(WRN) << "The last thread in the system has exited!\n";
+			if(reboot) {
+				db<Thread>(WRN) << "Rebooting the machine ...\n";
+				Machine::reboot();
+			} else {
+				db<Thread>(WRN) << "Halting the CPU ...\n";
+				CPU::halt();
+			}
+		}
+	}
 
-    CPU::int_enable();
-    CPU::halt();
-
-    return 0;
+	return 0;
 }
 
 __END_SYS

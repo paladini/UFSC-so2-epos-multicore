@@ -45,7 +45,8 @@ public:
     enum {
         HIGH = 0,
         NORMAL = 15,
-        LOW = 31
+        LOW = 31,
+		IDLE = 63
     };
 
     // Thread Configuration
