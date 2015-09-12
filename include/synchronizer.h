@@ -34,13 +34,9 @@ protected:
         previous->_state = Thread::WAITING;  
         queue.insert(&previous->_link);
 
-        //if(!Thread::_ready.empty()) {
-            Thread::_running = Thread::_ready.remove()->object();
-            Thread::_running->_state = Thread::RUNNING;
-            Thread::dispatch(previous, Thread::_running);
-       //} else {
-       //     Thread::idle();
-       // }
+		Thread::_running = Thread::_ready.remove()->object();
+		Thread::_running->_state = Thread::RUNNING;
+		Thread::dispatch(previous, Thread::_running);
 
         end_atomic();
     } 
