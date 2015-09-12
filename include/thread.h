@@ -110,6 +110,7 @@ protected:
     volatile State _state;
     Queue::Element _link;
 
+    static volatile unsigned int _thread_count;
     static Scheduler_Timer * _timer;
 
 private:
