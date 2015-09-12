@@ -243,7 +243,6 @@ int Thread::idle()
 		db<Thread>(TRC) << "Thread::idle()" << endl;
 
 		if(_thread_count <= 1) { // Only idle is left
-		   CPU::halt();
 		           CPU::int_disable();
 		           db<Thread>(WRN) << "The last thread has exited!" << endl;
 		           if(reboot) {
