@@ -56,6 +56,7 @@ public:
         State state;
         Priority priority;
         unsigned int stack_size;
+        // Thread* _waiting_for = 0;
     };
 
     // Thread Queue
@@ -99,13 +100,13 @@ protected:
 
     static int idle();
 
-    Thread* waiting_for() {
-        return _waiting_for;
-    }
+    // Thread* waiting_for() {
+    //     return _waiting_for;
+    // }
 
-    void waiting_for(Thread* thread) {
-        _waiting_for = thread;
-    }
+    // void waiting_for(Thread* thread) {
+    //     _waiting_for = thread;
+    // }
 
 private:
     static void init();
@@ -122,8 +123,7 @@ private:
     static Thread * volatile _running;
     static Queue _ready;
     static Queue _suspended;
-    Thread * _waiting_for;
-    // Queue _blocked;
+    Queue _blocked;
 };
 
 

@@ -85,9 +85,9 @@ int Thread::join()
     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
 
     if(_state != FINISHING) {
-        _running->waiting_for(this);
+        Queue::Element thread(_running->_link.object());
+        this->_blocked.insert(&thread);
         _running->suspend();
-        // _blocked.insert(&_running->_link);
     }
 
     unlock();
@@ -183,16 +183,24 @@ void Thread::exit(int status)
 
     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
 
-    if(!_suspended.empty()) {
-        Queue::Element * element = _suspended.head();
-        while((element != _suspended.tail()) || (_suspended.size() == 1)) {
-            if(element->object()->waiting_for() == _running) {
-                element->object()->waiting_for(0);
-                element->object()->resume();
-            }
-            element = element->next();
+    Queue temp = _running->_blocked;
+    if(!temp.empty()) {
+        while(Thread* e = _running->_blocked.remove()->object()) {
+            e->resume();
+            lock();
         }
     }
+
+    // if(!_suspended.empty()) {
+    //     Queue::Element * element = _suspended.head();
+    //     while((element != _suspended.tail()) || (_suspended.size() == 1)) {
+    //         if(element->object()->waiting_for() == _running) {
+    //             element->object()->waiting_for(0);
+    //             element->object()->resume();
+    //         }
+    //         element = element->next();
+    //     }
+    // }
 
     while(_ready.empty() && !_suspended.empty())
         idle(); // implicit unlock();
