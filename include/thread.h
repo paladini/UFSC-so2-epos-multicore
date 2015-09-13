@@ -60,7 +60,9 @@ public:
     };
 
     // Thread Queue
+    // typedef Queue<Thread> Queue_Common;
     typedef Ordered_Queue<Thread, Priority> Queue;
+    // typedef Queue<Thread> Queue;
 
 public:
     template<typename ... Tn>
@@ -100,6 +102,16 @@ protected:
 
     static int idle();
 
+    void release_blocked() {
+        if(!this->_blocked.empty()) {
+            // Queue_Common::Element* temp;
+            Queue* temp;
+            while((temp = this->_blocked.remove())) {
+                temp->object()->resume();
+                // lock();
+            }
+        }
+    }
     // Thread* waiting_for() {
     //     return _waiting_for;
     // }
