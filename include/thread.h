@@ -56,13 +56,10 @@ public:
         State state;
         Priority priority;
         unsigned int stack_size;
-        // Thread* _waiting_for = 0;
     };
 
     // Thread Queue
-    // typedef Queue<Thread> Queue_Common;
     typedef Ordered_Queue<Thread, Priority> Queue;
-    // typedef Queue<Thread> Queue;
 
 public:
     template<typename ... Tn>
@@ -104,21 +101,12 @@ protected:
 
     void release_blocked() {
         if(!this->_blocked.empty()) {
-            // Queue_Common::Element* temp;
             Queue* temp;
             while((temp = this->_blocked.remove())) {
                 temp->object()->resume();
-                // lock();
             }
         }
     }
-    // Thread* waiting_for() {
-    //     return _waiting_for;
-    // }
-
-    // void waiting_for(Thread* thread) {
-    //     _waiting_for = thread;
-    // }
 
 private:
     static void init();

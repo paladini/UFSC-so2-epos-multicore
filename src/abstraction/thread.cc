@@ -86,9 +86,6 @@ int Thread::join()
     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
 
     if(_state != FINISHING) {
-        // Ordered_Queue<Thread, Priority>::Element* temp = new Queue::Element(_running->_link.object());
-        // EPOS::S::U::List_Elements::Doubly_Linked<Thread>* temp = new EPOS::S::U::List_Elements::Doubly_Linked<Thread>(_running->_link.object());
-        // Queue::Element* temp = new Queue::Element(_running->_link.object());
         Queue::Element* temp = new Queue::Element(_running->_link.object());
         this->_blocked.insert(&temp);
         _running->suspend();
@@ -188,17 +185,6 @@ void Thread::exit(int status)
     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
 
     _running->release_blocked();
-
-    // if(!_suspended.empty()) {
-    //     Queue::Element * element = _suspended.head();
-    //     while((element != _suspended.tail()) || (_suspended.size() == 1)) {
-    //         if(element->object()->waiting_for() == _running) {
-    //             element->object()->waiting_for(0);
-    //             element->object()->resume();
-    //         }
-    //         element = element->next();
-    //     }
-    // }
 
     while(_ready.empty() && !_suspended.empty())
         idle(); // implicit unlock();
