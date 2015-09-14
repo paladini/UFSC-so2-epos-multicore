@@ -2,7 +2,7 @@
 
 #include <system/kmalloc.h>
 #include <machine.h>
-#include <semaphore.h>
+#include <mutex.h>
 #include <thread.h>
 
 // This_Thread class attributes
@@ -25,7 +25,7 @@ void Thread::constructor_prolog(unsigned int stack_size)
     lock();
 
     _stack = reinterpret_cast<char *>(kmalloc(stack_size));
-    _joined = new (kmalloc(sizeof(Semaphore))) Semaphore(0);
+    _joined = new (kmalloc(sizeof(Mutex))) Mutex();
 }
 
 
@@ -44,6 +44,8 @@ void Thread::constructor_epilog(const Log_Addr & entry, unsigned int stack_size)
         case SUSPENDED: _suspended.insert(&_link); break;
         default: _ready.insert(&_link);
     }
+
+    _joined->lock();
 
     unlock();
 }
@@ -87,7 +89,7 @@ int Thread::join()
     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
 
     if(_running != this && _state != FINISHING) {
-        _joined->p();
+        _joined->lock();
     }
 
     unlock();
@@ -210,7 +212,7 @@ void Thread::exit(int status)
 
     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
 
-    _running->_joined->v();
+    _running->_joined->unlock();
 
     while(_ready.empty() && !_suspended.empty())
         idle(); // implicit unlock();
