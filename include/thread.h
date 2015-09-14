@@ -99,15 +99,6 @@ protected:
 
     static int idle();
 
-    void release_blocked() {
-        if(!this->_blocked.empty()) {
-            Queue* temp;
-            while((temp = this->_blocked.remove())) {
-                temp->object()->resume();
-            }
-        }
-    }
-
 private:
     static void init();
 
@@ -123,7 +114,6 @@ private:
     static Thread * volatile _running;
     static Queue _ready;
     static Queue _suspended;
-    Queue _blocked;
 };
 
 

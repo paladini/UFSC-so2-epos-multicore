@@ -60,7 +60,6 @@ Thread::~Thread()
 
     _ready.remove(this);
     _suspended.remove(this);
-    release_blocked();
 
     unlock();
 
@@ -85,11 +84,8 @@ int Thread::join()
 
     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
 
-    if(_state != FINISHING) {
-        Queue::Element* temp = new Queue::Element(_running->_link.object());
-        this->_blocked.insert(&temp);
-        _running->suspend();
-    }
+    while(_state != FINISHING)
+        yield(); // implicit unlock()
 
     unlock();
 
@@ -183,8 +179,6 @@ void Thread::exit(int status)
     lock();
 
     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
-
-    _running->release_blocked();
 
     while(_ready.empty() && !_suspended.empty())
         idle(); // implicit unlock();

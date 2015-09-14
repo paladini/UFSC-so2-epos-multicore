@@ -12,10 +12,7 @@ __BEGIN_SYS
 class Synchronizer_Common
 {
 protected:
-    Synchronizer_Common() {}
-    
-    // implementar depois
-    ~Synchronizer_Common() {}
+    Synchronizer_Common(): _wakingAllUp(0) {}
 
     // Atomic operations
     bool tsl(volatile bool & lock) { return CPU::tsl(lock); }
@@ -26,34 +23,52 @@ protected:
     void begin_atomic() { Thread::lock(); }
     void end_atomic() { Thread::unlock(); }
 
-    void sleep() 
-    { 
-        Thread* running = Thread::running();
-        _queue.insert(&(running->_link));
-        running->suspend();
-    } // implicit unlock()
-    
-    void wakeup() 
-    {
-        if (Thread::Queue::Element* suspended = _queue.remove()) {
-            suspended->object()->resume();
+    typedef Queue<Thread> ThreadQueue;
+
+    void sleep() {
+        begin_atomic();
+        Thread * currentThread = Thread::self();
+        if (_wakingAllUp == 0) {
+            ThreadQueue::Element * element = new (kmalloc(sizeof(ThreadQueue::Element))) ThreadQueue::Element(currentThread);
+            _sleeping.insert(element);
+            currentThread->suspend();
+        } else {
+            Thread::yield(); 
         }
-        Thread::reschedule();
     }
 
-    void wakeup_all() 
-    {
-        for (unsigned int i = 0; i < _queue.size(); ++i) {
-            _queue.remove()->object()->resume();
+    void wakeup() {
+        begin_atomic();
+
+        ThreadQueue::Element * sleepingElement = _sleeping.head();
+        if (sleepingElement != 0) {
+            _sleeping.remove(sleepingElement);
+            Thread * sleepingThread = sleepingElement->object();
+            delete sleepingElement;
+            if (sleepingThread->state() == Thread::SUSPENDED) {
+                sleepingThread->resume();
+                return;
+            }
         }
-        Thread::reschedule();
+
+        end_atomic();
+    }
+
+    void wakeup_all() {
+        if (_wakingAllUp == 0) {
+            finc(_wakingAllUp);
+            while (!_sleeping.empty()) {
+                wakeup();
+            }
+            fdec(_wakingAllUp);
+        }
     }
 
 private:
-    Thread::Queue _queue;
+    ThreadQueue _sleeping;
+    volatile int _wakingAllUp; // Quenio: Evita "race condition" caso wakeup_all() e sleep() sejam chamados concorrentemente.
 };
 
 __END_SYS
 
 #endif
-
