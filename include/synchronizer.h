@@ -23,45 +23,16 @@ protected:
     void begin_atomic() { Thread::lock(); }
     void end_atomic() { Thread::unlock(); }
 
-    typedef Queue<Thread> ThreadQueue;
-
     void sleep() {
-        begin_atomic();
-        Thread * currentThread = Thread::self();
-        if (_wakingAllUp == 0) {
-            ThreadQueue::Element * element = new (kmalloc(sizeof(ThreadQueue::Element))) ThreadQueue::Element(currentThread);
-            _sleeping.insert(element);
-            currentThread->suspend();
-        } else {
-            Thread::yield(); 
-        }
+        Thread::sleep(_queue);
     }
 
     void wakeup() {
-        begin_atomic();
-
-        ThreadQueue::Element * sleepingElement = _sleeping.head();
-        if (sleepingElement != 0) {
-            _sleeping.remove(sleepingElement);
-            Thread * sleepingThread = sleepingElement->object();
-            delete sleepingElement;
-            if (sleepingThread->state() == Thread::SUSPENDED) {
-                sleepingThread->resume();
-                return;
-            }
-        }
-
-        end_atomic();
+        Thread::wakeup(_queue);
     }
 
     void wakeup_all() {
-        if (_wakingAllUp == 0) {
-            finc(_wakingAllUp);
-            while (!_sleeping.empty()) {
-                wakeup();
-            }
-            fdec(_wakingAllUp);
-        }
+        Thread::wakeup_all(_queue);
     }
 
 private:

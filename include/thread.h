@@ -78,6 +78,10 @@ public:
     void suspend();
     void resume();
 
+    static void sleep(Queue&);
+    static void wakeup(Queue&);
+    static void wakeup_all(Queue&);
+
     static Thread * volatile self() { return running(); }
     static void yield();
     static void exit(int status = 0);

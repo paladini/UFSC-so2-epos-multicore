@@ -151,6 +151,30 @@ void Thread::resume()
 }
 
 
+void Thread::sleep(Thread::Queue& queue) {
+    Thread* t = _running->_link.object();
+    Queue::Element* el = new (kmalloc(sizeof(Queue::Element))) Queue::Element(t);
+    queue.insert(el);
+    _running->suspend();
+}
+
+
+void Thread::wakeup(Thread::Queue& queue) {
+    if (Thread::Queue::Element * suspended = queue.remove()) {
+        suspended->object()->resume();
+    }
+    Thread::reschedule();
+}
+
+
+void Thread::wakeup_all(Thread::Queue& queue) {
+    for (unsigned int i = 0; i < queue.size(); ++i) {
+        queue.remove()->object()->resume();
+    }
+    Thread::reschedule();
+}
+
+
 // Class methods
 void Thread::yield()
 {
