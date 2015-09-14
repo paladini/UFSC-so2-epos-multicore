@@ -65,6 +65,8 @@ Thread::~Thread()
     _ready.remove(this);
     _suspended.remove(this);
 
+    delete _joined;
+
     unlock();
 
     kfree(_stack);
@@ -88,11 +90,12 @@ int Thread::join()
 
     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
 
-    if(_running != this && _state != FINISHING) {
+    assert(_running != this);
+    if(_state != FINISHING) {
         _joined->lock();
+    } else {
+        unlock();
     }
-
-    unlock();
 
     return *reinterpret_cast<int *>(_stack);
 }
@@ -238,7 +241,7 @@ void Thread::exit(int status)
             CPU::halt();
         }
     }
-    
+
     unlock();
 }
 
