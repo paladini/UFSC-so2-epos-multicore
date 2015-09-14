@@ -93,6 +93,7 @@ int Thread::join()
     assert(_running != this);
     if(_state != FINISHING) {
         _joined->lock();
+        _joined->unlock();
     } else {
         unlock();
     }
