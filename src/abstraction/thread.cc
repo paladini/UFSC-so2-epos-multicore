@@ -2,6 +2,7 @@
 
 #include <system/kmalloc.h>
 #include <machine.h>
+#include <semaphore.h>
 #include <thread.h>
 
 // This_Thread class attributes
@@ -24,6 +25,7 @@ void Thread::constructor_prolog(unsigned int stack_size)
     lock();
 
     _stack = reinterpret_cast<char *>(kmalloc(stack_size));
+    _joined = new (kmalloc(sizeof(Semaphore))) Semaphore(0);
 }
 
 
@@ -84,10 +86,8 @@ int Thread::join()
 
     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
 
-    if(_state != FINISHING) {
-        Queue::Element* temp = new (kmalloc(sizeof(Queue::Element))) Queue::Element(_running->_link.object());
-        this->_blocked.insert(temp);
-        _running->suspend();
+    if(_running != this && _state != FINISHING) {
+        _joined->p();
     }
 
     unlock();
@@ -154,7 +154,8 @@ void Thread::resume()
 }
 
 
-void Thread::sleep(Thread::Queue& queue) {
+void Thread::sleep(Thread::Queue& queue)
+{
     Thread* t = _running->_link.object();
     Queue::Element* el = new (kmalloc(sizeof(Queue::Element))) Queue::Element(t);
     queue.insert(el);
@@ -162,7 +163,8 @@ void Thread::sleep(Thread::Queue& queue) {
 }
 
 
-void Thread::wakeup(Thread::Queue& queue) {
+void Thread::wakeup(Thread::Queue& queue)
+{
     if (Thread::Queue::Element * suspended = queue.remove()) {
         suspended->object()->resume();
     }
@@ -170,7 +172,8 @@ void Thread::wakeup(Thread::Queue& queue) {
 }
 
 
-void Thread::wakeup_all(Thread::Queue& queue) {
+void Thread::wakeup_all(Thread::Queue& queue)
+{
     for (unsigned int i = 0; i < queue.size(); ++i) {
         queue.remove()->object()->resume();
     }
@@ -207,11 +210,13 @@ void Thread::exit(int status)
 
     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
 
+    _running->_joined->v();
+
     while(_ready.empty() && !_suspended.empty())
         idle(); // implicit unlock();
 
     lock();
-
+ 
     if(!_ready.empty()) {
         Thread * prev = _running;
         prev->_state = FINISHING;
@@ -231,7 +236,7 @@ void Thread::exit(int status)
             CPU::halt();
         }
     }
-
+    
     unlock();
 }
 
