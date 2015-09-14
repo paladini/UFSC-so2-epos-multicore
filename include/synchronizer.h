@@ -12,7 +12,7 @@ __BEGIN_SYS
 class Synchronizer_Common
 {
 protected:
-    Synchronizer_Common(): _wakingAllUp(0) {}
+    Synchronizer_Common() {}
 
     // Atomic operations
     bool tsl(volatile bool & lock) { return CPU::tsl(lock); }
@@ -36,8 +36,7 @@ protected:
     }
 
 private:
-    ThreadQueue _sleeping;
-    volatile int _wakingAllUp; // Quenio: Evita "race condition" caso wakeup_all() e sleep() sejam chamados concorrentemente.
+    Thread::Queue _queue;
 };
 
 __END_SYS
