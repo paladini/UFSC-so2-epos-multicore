@@ -84,8 +84,11 @@ int Thread::join()
 
     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
 
-    while(_state != FINISHING)
-        yield(); // implicit unlock()
+    if(_state != FINISHING) {
+        Queue::Element* temp = new (kmalloc(sizeof(Queue::Element))) Queue::Element(_running->_link.object());
+        this->_blocked.insert(temp);
+        _running->suspend();
+    }
 
     unlock();
 
