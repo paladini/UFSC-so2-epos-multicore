@@ -18,12 +18,14 @@ Scheduler_Timer * Thread::_timer;
 Thread* volatile Thread::_running;
 Thread::Queue Thread::_ready;
 Thread::Queue Thread::_suspended;
+unsigned int Thread::_active_count = -1;
 
 // Methods
 void Thread::constructor_prolog(unsigned int stack_size)
 {
     lock();
 
+    ++_active_count;
     _stack = reinterpret_cast<char *>(kmalloc(stack_size));
     _joined = new (kmalloc(sizeof(Mutex))) Mutex();
 }
@@ -66,6 +68,7 @@ Thread::~Thread()
     _suspended.remove(this);
 
     delete _joined;
+    --_active_count;
 
     unlock();
 
