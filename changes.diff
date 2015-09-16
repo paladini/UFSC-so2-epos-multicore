@@ -1,0 +1,104 @@
+Index: include/thread.h
+===================================================================
+--- include/thread.h	(revision 3687)
++++ include/thread.h	(working copy)
+@@ -78,6 +78,10 @@
+     void suspend();
+     void resume();
+ 
++    static void sleep(Queue&);
++    static void wakeup(Queue&);
++    static void wakeup_all(Queue&);
++
+     static Thread * volatile self() { return running(); }
+     static void yield();
+     static void exit(int status = 0);
+@@ -114,6 +118,7 @@
+     static Thread * volatile _running;
+     static Queue _ready;
+     static Queue _suspended;
++    Mutex * _joined;
+ };
+Index: src/abstraction/thread.cc
+===================================================================
+--- src/abstraction/thread.cc	(revision 3687)
++++ src/abstraction/thread.cc	(working copy)
+@@ -2,6 +2,7 @@
+ 
+ #include <system/kmalloc.h>
+ #include <machine.h>
++#include <mutex.h>
+ #include <thread.h>
+ 
+ // This_Thread class attributes
+@@ -24,6 +25,7 @@
+     lock();
+ 
+     _stack = reinterpret_cast<char *>(kmalloc(stack_size));
++    _joined = new (kmalloc(sizeof(Mutex))) Mutex();
+ }
+ 
+ 
+@@ -43,6 +45,8 @@
+         default: _ready.insert(&_link);
+     }
+ 
++    _joined->lock();
++
+     unlock();
+ }
+ 
+@@ -61,12 +65,25 @@
+     _ready.remove(this);
+     _suspended.remove(this);
+ 
++    delete _joined;
++
+     unlock();
+ 
+     kfree(_stack);
+ }
+ 
+ int Thread::join()
+ {
+     lock();
+@@ -73,11 +90,14 @@
+ 
+     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
+ 
+-    while(_state != FINISHING)
+-        yield(); // implicit unlock()
++    assert(_running != this);
++    if(_state != FINISHING) {
++        _joined->lock();
++        _joined->unlock();
++    } else {
++        unlock();
++    }
+ 
+-    unlock();
+-
+     return *reinterpret_cast<int *>(_stack);
+ }
+ 
+@@ -140,6 +160,33 @@
+ }
+ 
+ // Class methods
+ void Thread::yield()
+ {
+@@ -169,11 +216,13 @@
+ 
+     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
+ 
++    _running->_joined->unlock();
++
+     while(_ready.empty() && !_suspended.empty())
+         idle(); // implicit unlock();
+ 
+     lock();
+-
++ 
+     if(!_ready.empty()) {
+         Thread * prev = _running;
+         prev->_state = FINISHING;
