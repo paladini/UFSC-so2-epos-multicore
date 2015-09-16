@@ -47,7 +47,7 @@ public:
         HIGH = 1,
         NORMAL = 15,
         LOW = 31,
-        IDLE = 32
+        IDLE = LOW + 1
     };
 
     // Thread Configuration

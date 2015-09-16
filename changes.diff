@@ -12,7 +12,7 @@ Index: include/thread.h
          NORMAL = 15,
 -        LOW = 31
 +        LOW = 31,
-+        IDLE = 32
++        IDLE = LOW + 1
      };
 
      // Thread Configuration
