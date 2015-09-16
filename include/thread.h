@@ -43,9 +43,11 @@ public:
     // Thread Priority
     typedef unsigned int Priority;
     enum {
-        HIGH = 0,
+        MAIN = 0,
+        HIGH = 1,
         NORMAL = 15,
-        LOW = 31
+        LOW = 31,
+        IDLE = 32
     };
 
     // Thread Configuration
