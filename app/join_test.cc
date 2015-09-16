@@ -57,6 +57,8 @@ int main() {
 		mutex_display.lock();
 		cout << "Finished " << i << "." << endl;
 		mutex_display.unlock();
+
+        delete anything[i];
 	}
 
 
@@ -76,6 +78,8 @@ int main() {
 		mutex_display.lock();
 		cout << "Finished " << i << "." << endl;
 		mutex_display.unlock();
+
+        delete anything[i];
 	}
 
 	cout << "I'm done!" << endl;
