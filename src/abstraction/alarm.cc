@@ -3,6 +3,7 @@
 #include <semaphore.h>
 #include <alarm.h>
 #include <display.h>
+#include <thread_handler.h>
 
 __BEGIN_SYS
 
@@ -26,7 +27,7 @@ Alarm::Alarm(const Microsecond & time, Handler * handler, int times)
         unlock();
     } else {
         unlock();
-        (*handler)();
+        handler->handler();
     }
 }
 
@@ -48,17 +49,14 @@ void Alarm::delay(const Microsecond & time)
 {
     db<Alarm>(TRC) << "Alarm::delay(time=" << time << ")" << endl;
 
-    Tick t = _elapsed + ticks(time);
-
-    while(_elapsed < t);
+    Thread_Handler wait(Thread::running());
+    Alarm alarm(time, &wait, 1);
+    Thread::running()->suspend();
 }
 
 
 void Alarm::handler(const IC::Interrupt_Id & i)
 {
-    static Tick next_tick;
-    static Handler * next_handler;
-
     lock();
 
     _elapsed++;
@@ -72,30 +70,23 @@ void Alarm::handler(const IC::Interrupt_Id & i)
         display.position(lin, col);
     }
 
-    if(next_tick)
-        next_tick--;
-    if(!next_tick) {
-        if(next_handler) {
-            db<Alarm>(TRC) << "Alarm::handler(h=" << reinterpret_cast<void *>(next_handler) << ")" << endl;
-            (*next_handler)();
-        }
-        if(_request.empty())
-            next_handler = 0;
-        else {
-            Queue::Element * e = _request.remove();
-            Alarm * alarm = e->object();
-            next_tick = alarm->_ticks;
-            next_handler = alarm->_handler;
-            if(alarm->_times != -1)
-                alarm->_times--;
-            if(alarm->_times) {
-                e->rank(alarm->_ticks);
-                _request.insert(e);
-            }
-        }
+    Alarm* alarm = 0;
+    if(!_request.empty() && _request.head()->promote() <= 0) {
+    	Queue::Element* e = _request.remove();
+    	alarm = e->object();
+		if(alarm->_times != -1)
+			alarm->_times--;
+		if(alarm->_times) {
+			e->rank(alarm->_ticks);
+			_request.insert(e);
+		}
     }
 
     unlock();
+
+    if(alarm) {
+    	alarm->_handler->handler();
+    }
 }
 
 __END_SYS

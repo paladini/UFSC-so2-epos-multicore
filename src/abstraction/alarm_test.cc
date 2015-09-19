@@ -2,6 +2,7 @@
 
 #include <utility/ostream.h>
 #include <alarm.h>
+#include <function_handler.h>
 
 using namespace EPOS;
 
@@ -19,8 +20,10 @@ int main()
     cout << "I'm the first thread of the first task created in the system." << endl;
     cout << "I'll now create two alarms and put myself in a delay ..." << endl;
 
-    Alarm alarm_a(2000000, &func_a, iterations);
-    Alarm alarm_b(1000000, &func_b, iterations);
+    Funciton_Handler handlerA(&func_a);
+    Funciton_Handler handlerB(&func_b);
+    Alarm alarm_a(2000000, &handlerA, iterations);
+    Alarm alarm_b(1000000, &handlerB, iterations);
 
     // Note that in case of idle-waiting, this thread will go into suspend
     // and the alarm handlers above will trigger the functions in the context
