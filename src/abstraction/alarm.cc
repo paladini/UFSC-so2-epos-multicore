@@ -3,6 +3,7 @@
 #include <semaphore.h>
 #include <alarm.h>
 #include <display.h>
+#include <thread_handler.h>
 
 __BEGIN_SYS
 
@@ -48,9 +49,9 @@ void Alarm::delay(const Microsecond & time)
 {
     db<Alarm>(TRC) << "Alarm::delay(time=" << time << ")" << endl;
 
-    Tick t = _elapsed + ticks(time);
-
-    while(_elapsed < t);
+    Thread_Handler wait(Thread::running());
+    Alarm alarm(time, &wait, 1);
+    Thread::running()->suspend();
 }
 
 

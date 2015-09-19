@@ -8,7 +8,7 @@ src/architecture/ia32/ia32_crt0.s
 lib/*
 
 #with internal gitignore
-#bin/*
+bin/*
 #img/*
 #tools/*
 #src/setup/*
