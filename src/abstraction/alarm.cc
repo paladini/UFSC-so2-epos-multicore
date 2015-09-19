@@ -72,7 +72,7 @@ void Alarm::handler(const IC::Interrupt_Id & i)
     Alarm* alarm = 0;
     if(!_request.empty() && _request.head()->promote() <= 0) {
     	Queue::Element* e = _request.remove();
-    	alarm = e->_object;
+    	alarm = e->object();
 		if(alarm->_times != -1)
 			alarm->_times--;
 		if(alarm->_times) {
@@ -83,7 +83,7 @@ void Alarm::handler(const IC::Interrupt_Id & i)
 
     unlock();
 
-    if(alarm){
+    if(alarm) {
     	alarm->_handler->handler();
     }
 }

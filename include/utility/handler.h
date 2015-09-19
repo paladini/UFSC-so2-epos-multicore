@@ -10,7 +10,8 @@ __BEGIN_UTIL
 class Handler{
 
 public:
-	virtual ~Handler();
+	Handler() {}
+	virtual ~Handler() {}
 	virtual void handler() = 0;
 
 };
