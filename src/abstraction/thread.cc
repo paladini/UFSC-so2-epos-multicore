@@ -141,7 +141,6 @@ void Thread::suspend()
         dispatch(this, _running);
     }
 
-
     unlock();
 }
 
@@ -167,15 +166,14 @@ void Thread::yield()
 
     db<Thread>(TRC) << "Thread::yield(running=" << _running << ")" << endl;
 
+	Thread * prev = _running;
+	prev->_state = READY;
+	_ready.insert(&prev->_link);
 
-        Thread * prev = _running;
-        prev->_state = READY;
-        _ready.insert(&prev->_link);
+	_running = _ready.remove()->object();
+	_running->_state = RUNNING;
 
-        _running = _ready.remove()->object();
-        _running->_state = RUNNING;
-
-        dispatch(prev, _running);
+	dispatch(prev, _running);
 
     unlock();
 }
@@ -195,13 +193,9 @@ void Thread::exit(int status)
 
     addAllToReady(&prev->joined);
 
-
-
-    lock();
-
-        _running = _ready.remove()->object();
-        _running->_state = RUNNING;
-        dispatch(prev, _running);
+	_running = _ready.remove()->object();
+	_running->_state = RUNNING;
+	dispatch(prev, _running);
 
     unlock();
 }
@@ -242,20 +236,20 @@ int Thread::idle()
 	while(true) {
 		db<Thread>(TRC) << "Thread::idle()" << endl;
 
-		if(_thread_count <= 1) { // Only idle is left
-		           CPU::int_disable();
-		           db<Thread>(WRN) << "The last thread has exited!" << endl;
-		           if(reboot) {
-		               db<Thread>(WRN) << "Rebooting the machine ..." << endl;
-		                Machine::reboot();
-		            } else {
-		                db<Thread>(WRN) << "Halting the machine ..." << endl;
-		                CPU::halt();
-		            }
-		        } else {
-		            CPU::int_enable();
-		            CPU::halt();
-		        }
+		if(_thread_count <= 1) {
+		   CPU::int_disable();
+		   db<Thread>(WRN) << "The last thread in the system has exited!" << endl;
+		   if(reboot) {
+			   db<Thread>(WRN) << "Rebooting the machine ..." << endl;
+			   Machine::reboot();
+		   } else {
+			   db<Thread>(WRN) << "Halting the CPU ..." << endl;
+			   CPU::halt();
+		   }
+		} else {
+			CPU::int_enable();
+			CPU::halt();
+		}
 	}
 
 	return 0;
