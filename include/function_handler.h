@@ -8,15 +8,15 @@
 
 __BEGIN_SYS
 
-class Funciton_Handler : public Handler {
+class Function_Handler : public Handler {
 public:
 	typedef void (Function)();
 
-	Funciton_Handler(Function * function){
+	Function_Handler(Function * function){
 		this->function = function;
 	}
 
-	~Funciton_Handler() {}
+	~Function_Handler() {}
 
 	void handler(){
 		function();
