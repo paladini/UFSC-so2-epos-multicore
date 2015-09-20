@@ -12,9 +12,7 @@ class Function_Handler : public Handler {
 public:
 	typedef void (Function)();
 
-	Function_Handler(Function * function){
-		this->function = function;
-	}
+	Function_Handler(Function* function) : function(function) {}
 
 	~Function_Handler() {}
 

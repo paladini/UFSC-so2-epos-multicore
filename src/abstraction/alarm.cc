@@ -51,13 +51,8 @@ void Alarm::delay(const Microsecond & time)
 
     Semaphore semaphore(0);
     Semaphore_Handler handler(&semaphore);
-    Alarm alarm(time, &handler, 1); // if time < tick trigger v()
+    Alarm alarm(time, &handler, 1);
     semaphore.p();
-
-    /*Thread_Handler wait(Thread::running());
-    Alarm alarm(time, &wait, 1);
-    Thread::running()->suspend();
-    */
 }
 
 

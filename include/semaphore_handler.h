@@ -10,9 +10,7 @@ __BEGIN_SYS
 
 class Semaphore_Handler : public Handler {
 public:
-	Semaphore_Handler(Semaphore* semaphore){
-		this->semaphore = semaphore;
-	}
+	Semaphore_Handler(Semaphore* semaphore) : semaphore(semaphore) {}
 
 	~Semaphore_Handler(){}
 
