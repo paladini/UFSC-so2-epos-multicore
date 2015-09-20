@@ -69,6 +69,8 @@ void Alarm::delay(const Microsecond & time)
 
 void Alarm::handler(const IC::Interrupt_Id & i)
 {
+    typedef Simple_List<Handler> HList;
+
     lock();
 
     ++_elapsed;
@@ -82,14 +84,14 @@ void Alarm::handler(const IC::Interrupt_Id & i)
         display.position(lin, col);
     }
 
-    Simple_List<Handler> handler;
+    HList handler;
 
     if(!_request.empty()) {
         while(_request.head()->promote() <= 0) {
             Queue::Element* e = _request.remove();
             Alarm* alarm = e->object();
 
-            handler.insert(new (kmalloc(sizeof(Simple_List<Handler>::Element))) Simple_List<Handler>::Element(alarm->_handler));
+            handler.insert(new (kmalloc(sizeof(HList::Element))) HList::Element(alarm->_handler));
             
             alarm->_times--;
             if(alarm->_times > 0) {
@@ -101,8 +103,9 @@ void Alarm::handler(const IC::Interrupt_Id & i)
 
     unlock();
 
-    while(!handler.empty()) {
-        (*handler.remove()->object())();
+    for (HList::Iterator it = handler.begin(); it != handler.end(); ++it) {
+        Handler * h = it->object();
+        (*h)();
     }
 }
 
