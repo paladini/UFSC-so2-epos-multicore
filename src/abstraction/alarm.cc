@@ -3,6 +3,7 @@
 #include <alarm.h>
 #include <display.h>
 #include <thread.h>
+#include <utility/list.h>
 
 __BEGIN_SYS
 
@@ -68,9 +69,6 @@ void Alarm::delay(const Microsecond & time)
 
 void Alarm::handler(const IC::Interrupt_Id & i)
 {
-    static Tick next_tick;
-    static Handler * next_handler;
-
     lock();
 
     ++_elapsed;
@@ -84,23 +82,17 @@ void Alarm::handler(const IC::Interrupt_Id & i)
         display.position(lin, col);
     }
 
-    if(next_tick)
-        --next_tick;
-    if(!next_tick) {
-        if(next_handler) {
-            db<Alarm>(TRC) << "Alarm::handler(h=" << reinterpret_cast<void *>(next_handler) << ")" << endl;
-            (*next_handler)();
-        }
-        if(_request.empty())
-            next_handler = 0;
-        else {
-            Queue::Element * e = _request.remove();
-            Alarm * alarm = e->object();
-            next_tick = alarm->_ticks;
-            next_handler = alarm->_handler;
-            if(alarm->_times != INFINITE)
-                --alarm->_times;
-            if(alarm->_times) {
+    Simple_List<Handler> handler;
+
+    if(!_request.empty()) {
+        while(_request.head()->promote() <= 0) {
+            Queue::Element* e = _request.remove();
+            Alarm* alarm = e->object();
+
+            handler.insert(new (kmalloc(sizeof(Simple_List<Handler>::Element))) Simple_List<Handler>::Element(alarm->_handler));
+            
+            alarm->_times--;
+            if(alarm->_times > 0) {
                 e->rank(alarm->_ticks);
                 _request.insert(e);
             }
@@ -108,6 +100,10 @@ void Alarm::handler(const IC::Interrupt_Id & i)
     }
 
     unlock();
+
+    while(!handler.empty()) {
+        (*handler.remove()->object())();
+    }
 }
 
 __END_SYS
