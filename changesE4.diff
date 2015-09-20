@@ -1,0 +1,215 @@
+diff --git a/include/function_handler.h b/include/function_handler.h
+index e69de29..97e9d20 100644
+--- a/include/function_handler.h
++++ b/include/function_handler.h
+@@ -0,0 +1,30 @@
++
++
++#ifndef __function_handler_h
++#define __function_handler_h
++
++#include <system/config.h>
++#include <utility/handler.h>
++
++__BEGIN_SYS
++
++class Function_Handler : public Handler {
++public:
++	typedef void (Function)();
++
++	Function_Handler(Function* function) : function(function) {}
++
++	~Function_Handler() {}
++
++	void handler(){
++		function();
++	}
++
++private:
++	Function * function;
++};
++
++
++__END_SYS
++
++#endif
+diff --git a/include/semaphore_handler.h b/include/semaphore_handler.h
+index e69de29..d1ac9a4 100644
+--- a/include/semaphore_handler.h
++++ b/include/semaphore_handler.h
+@@ -0,0 +1,29 @@
++
++#ifndef __semaphore_handler
++#define __semephore_handler
++
++#include <utility/handler.h>
++#include <semaphore.h>
++
++
++__BEGIN_SYS
++
++class Semaphore_Handler : public Handler {
++public:
++	Semaphore_Handler(Semaphore* semaphore) : semaphore(semaphore) {}
++
++	~Semaphore_Handler(){}
++
++	void handler(){
++		semaphore->v();
++	}
++
++private:
++	Semaphore* semaphore;
++
++};
++
++__END_SYS
++
++#endif
++
+diff --git a/include/system/config.h b/include/system/config.h
+index 0c12018..b382760 100644
+--- a/include/system/config.h
++++ b/include/system/config.h
+@@ -11,7 +11,7 @@
+ #define ARCH ia32
+ #define MACH pc
+ #define MMOD legacy
+-#define APPL philosophers_dinner
++#define APPL alarm_test
+ #define __mode_library__
+ #define __arch_ia32__
+ #define __mach_pc__
+diff --git a/include/utility/handler.h b/include/utility/handler.h
+index 11b0f04..0f242a3 100644
+--- a/include/utility/handler.h
++++ b/include/utility/handler.h
+@@ -7,7 +7,14 @@
+ 
+ __BEGIN_UTIL
+ 
+-typedef void (Handler)();
++class Handler{
++
++public:
++	Handler() {}
++	virtual ~Handler() {}
++	virtual void handler() = 0;
++
++};
+ 
+ __END_UTIL
+ 
+diff --git a/src/abstraction/alarm.cc b/src/abstraction/alarm.cc
+index ec8b9ce..b9c873a 100644
+--- a/src/abstraction/alarm.cc
++++ b/src/abstraction/alarm.cc
+@@ -3,6 +3,7 @@
+ #include <semaphore.h>
+ #include <alarm.h>
+ #include <display.h>
++#include <semaphore_handler.h>
+ 
+ __BEGIN_SYS
+ 
+@@ -26,7 +27,7 @@ Alarm::Alarm(const Microsecond & time, Handler * handler, int times)
+         unlock();
+     } else {
+         unlock();
+-        (*handler)();
++        handler->handler();
+     }
+ }
+ 
+@@ -48,17 +49,15 @@ void Alarm::delay(const Microsecond & time)
+ {
+     db<Alarm>(TRC) << "Alarm::delay(time=" << time << ")" << endl;
+ 
+-    Tick t = _elapsed + ticks(time);
+-
+-    while(_elapsed < t);
++    Semaphore semaphore(0);
++    Semaphore_Handler handler(&semaphore);
++    Alarm alarm(time, &handler, 1);
++    semaphore.p();
+ }
+ 
+ 
+ void Alarm::handler(const IC::Interrupt_Id & i)
+ {
+-    static Tick next_tick;
+-    static Handler * next_handler;
+-
+     lock();
+ 
+     _elapsed++;
+@@ -72,30 +71,23 @@ void Alarm::handler(const IC::Interrupt_Id & i)
+         display.position(lin, col);
+     }
+ 
+-    if(next_tick)
+-        next_tick--;
+-    if(!next_tick) {
+-        if(next_handler) {
+-            db<Alarm>(TRC) << "Alarm::handler(h=" << reinterpret_cast<void *>(next_handler) << ")" << endl;
+-            (*next_handler)();
+-        }
+-        if(_request.empty())
+-            next_handler = 0;
+-        else {
+-            Queue::Element * e = _request.remove();
+-            Alarm * alarm = e->object();
+-            next_tick = alarm->_ticks;
+-            next_handler = alarm->_handler;
+-            if(alarm->_times != -1)
+-                alarm->_times--;
+-            if(alarm->_times) {
+-                e->rank(alarm->_ticks);
+-                _request.insert(e);
+-            }
+-        }
++    Alarm* alarm = 0;
++    if(!_request.empty() && _request.head()->promote() <= 0) {
++    	Queue::Element* e = _request.remove();
++    	alarm = e->object();
++		if(alarm->_times != -1)
++			alarm->_times--;
++		if(alarm->_times) {
++			e->rank(alarm->_ticks);
++			_request.insert(e);
++		}
+     }
+ 
+     unlock();
++
++    if(alarm) {
++    	alarm->_handler->handler();
++    }
+ }
+ 
+ __END_SYS
+diff --git a/src/abstraction/alarm_test.cc b/src/abstraction/alarm_test.cc
+index 03186cd..0c11312 100644
+--- a/src/abstraction/alarm_test.cc
++++ b/src/abstraction/alarm_test.cc
+@@ -2,6 +2,7 @@
+ 
+ #include <utility/ostream.h>
+ #include <alarm.h>
++#include <function_handler.h>
+ 
+ using namespace EPOS;
+ 
+@@ -19,8 +20,10 @@ int main()
+     cout << "I'm the first thread of the first task created in the system." << endl;
+     cout << "I'll now create two alarms and put myself in a delay ..." << endl;
+ 
+-    Alarm alarm_a(2000000, &func_a, iterations);
+-    Alarm alarm_b(1000000, &func_b, iterations);
++    Function_Handler handlerA(&func_a);
++    Function_Handler handlerB(&func_b);
++    Alarm alarm_a(2000000, &handlerA, iterations);
++    Alarm alarm_b(1000000, &handlerB, iterations);
+ 
+     // Note that in case of idle-waiting, this thread will go into suspend
+     // and the alarm handlers above will trigger the functions in the context
