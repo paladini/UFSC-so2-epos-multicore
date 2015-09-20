@@ -73,7 +73,7 @@ void Alarm::handler(const IC::Interrupt_Id & i)
 
     lock();
 
-    _elapsed++;
+    ++_elapsed;
 
     if(Traits<Alarm>::visible) {
         Display display;
@@ -85,7 +85,7 @@ void Alarm::handler(const IC::Interrupt_Id & i)
     }
 
     if(next_tick)
-        next_tick--;
+        --next_tick;
     if(!next_tick) {
         if(next_handler) {
             db<Alarm>(TRC) << "Alarm::handler(h=" << reinterpret_cast<void *>(next_handler) << ")" << endl;
@@ -98,8 +98,8 @@ void Alarm::handler(const IC::Interrupt_Id & i)
             Alarm * alarm = e->object();
             next_tick = alarm->_ticks;
             next_handler = alarm->_handler;
-            if(alarm->_times != -1)
-                alarm->_times--;
+            if(alarm->_times != INFINITE)
+                --alarm->_times;
             if(alarm->_times) {
                 e->rank(alarm->_ticks);
                 _request.insert(e);
