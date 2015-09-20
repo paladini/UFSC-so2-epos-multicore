@@ -1,236 +1,122 @@
-Index: include/thread.h
-===================================================================
---- include/thread.h	(revision 3687)
-+++ include/thread.h	(working copy)
-@@ -43,9 +43,11 @@
-     // Thread Priority
-     typedef unsigned int Priority;
-     enum {
--        HIGH = 0,
-+        MAIN = 0,
-+        HIGH = 1,
-         NORMAL = 15,
--        LOW = 31
-+        LOW = 31,
-+        IDLE = LOW + 1
-     };
-
-     // Thread Configuration
-@@ -114,6 +120,8 @@
-     static Thread * volatile _running;
-     static Queue _ready;
-     static Queue _suspended;
-+    static unsigned int _active_count;
-+    Mutex * _joined;
- };
-
-
-Index: src/abstraction/thread.cc
-===================================================================
---- src/abstraction/thread.cc	(revision 3687)
-+++ src/abstraction/thread.cc	(working copy)
-@@ -2,6 +2,7 @@
+diff --git a/include/utility/handler.h b/include/utility/handler.h
+index 11b0f04..446f8fe 100644
+--- a/include/utility/handler.h
++++ b/include/utility/handler.h
+@@ -7,7 +7,12 @@
  
- #include <system/kmalloc.h>
- #include <machine.h>
-+#include <mutex.h>
- #include <thread.h>
+ __BEGIN_UTIL
  
- // This_Thread class attributes
-@@ -17,6 +18,7 @@
- Thread* volatile Thread::_running;
- Thread::Queue Thread::_ready;
- Thread::Queue Thread::_suspended;
-+unsigned int Thread::_active_count = -1;
-
- // Methods
- void Thread::constructor_prolog(unsigned int stack_size)
-@@ -23,7 +25,9 @@
- {
-     lock();
+-typedef void (Handler)();
++class Handler
++{
++public:
++    Handler() {}
++    virtual void operator()() = 0;
++};
  
-+    ++_active_count;
-     _stack = reinterpret_cast<char *>(kmalloc(stack_size));
-+    _joined = new (kmalloc(sizeof(Mutex))) Mutex();
+ __END_UTIL
+ 
+diff --git a/src/abstraction/alarm.cc b/src/abstraction/alarm.cc
+index ec8b9ce..86c311e 100644
+--- a/src/abstraction/alarm.cc
++++ b/src/abstraction/alarm.cc
+@@ -1,8 +1,9 @@
+ // EPOS Alarm Abstraction Implementation
+ 
+-#include <semaphore.h>
+ #include <alarm.h>
+ #include <display.h>
++#include <thread.h>
++#include <utility/list.h>
+ 
+ __BEGIN_SYS
+ 
+@@ -43,25 +44,36 @@ Alarm::~Alarm()
  }
  
  
-@@ -43,6 +47,8 @@
-         default: _ready.insert(&_link);
++class SuspendHandler : public Handler
++{
++public:
++    SuspendHandler(Thread * thread) : _thread(thread) {}
++    void operator()() { _thread->resume(); }
++
++private:
++    Thread * _thread;
++};
++
++
+ // Class methods
+ void Alarm::delay(const Microsecond & time)
+ {
+     db<Alarm>(TRC) << "Alarm::delay(time=" << time << ")" << endl;
+ 
+-    Tick t = _elapsed + ticks(time);
+-
+-    while(_elapsed < t);
++    Thread * self = Thread::self();
++    SuspendHandler sh(self);
++    Alarm alarm(time, &sh, 1);
++    self->suspend();
+ }
+ 
+ 
+ void Alarm::handler(const IC::Interrupt_Id & i)
+ {
+-    static Tick next_tick;
+-    static Handler * next_handler;
++    typedef Simple_List<Handler> HList;
+ 
+     lock();
+ 
+-    _elapsed++;
++    ++_elapsed;
+ 
+     if(Traits<Alarm>::visible) {
+         Display display;
+@@ -72,23 +84,18 @@ void Alarm::handler(const IC::Interrupt_Id & i)
+         display.position(lin, col);
      }
  
-+    _joined->lock();
-+
-     unlock();
- }
- 
-@@ -61,12 +67,26 @@
-     _ready.remove(this);
-     _suspended.remove(this);
- 
-+    delete _joined;
-+    --_active_count;
-+
-     unlock();
- 
-     kfree(_stack);
- }
- 
- int Thread::join()
- {
-     lock();
-@@ -73,8 +93,11 @@
- 
-     db<Thread>(TRC) << "Thread::join(this=" << this << ",state=" << _state << ")" << endl;
- 
--    while(_state != FINISHING)
--        yield(); // implicit unlock()
-+    assert(_running != this);
-+    if(_state != FINISHING) {
-+        _joined->lock();
-+        _joined->unlock();
-+    }
- 
-     unlock();
- 
-@@ -111,16 +134,14 @@
-     if(_running != this)
-         _ready.remove(this);
-
-+    Thread * _current = _running;
-+    _suspended.insert(&_link);
-     _state = SUSPENDED;
--    _suspended.insert(&_link);
-
--    if((_running == this) && !_ready.empty()) {
--        _running = _ready.remove()->object();
--        _running->_state = RUNNING;
-+    _running = _ready.remove()->object();
-+    _running->_state = RUNNING;
-
--        dispatch(this, _running);
--    } else
--        idle(); // implicit unlock()
-+    dispatch(_current, _running);
-
-     unlock();
- }
-@@ -147,19 +195,14 @@
-
-     db<Thread>(TRC) << "Thread::yield(running=" << _running << ")" << endl;
-
--    if(!_ready.empty()) {
--        Thread * prev = _running;
--        prev->_state = READY;
--        _ready.insert(&prev->_link);
-+    Thread * prev = _running;
-+    prev->_state = READY;
-+    _ready.insert(&prev->_link);
-
--        _running = _ready.remove()->object();
--        _running->_state = RUNNING;
-+    _running = _ready.remove()->object();
-+    _running->_state = RUNNING;
-
--        dispatch(prev, _running);
--    } else
--        idle();
--
--    unlock();
-+    dispatch(prev, _running);
- }
- 
-
-@@ -169,31 +212,14 @@
-
-     db<Thread>(TRC) << "Thread::exit(status=" << status << ") [running=" << running() << "]" << endl;
-
--    while(_ready.empty() && !_suspended.empty())
--        idle(); // implicit unlock();
-+    Thread * prev = _running;
-+    prev->_state = FINISHING;
-+    *reinterpret_cast<int *>(prev->_stack) = status;
-
--    lock();
-+    prev->_joined->unlock();
-+    _running = _ready.remove()->object();
-+    dispatch(prev, _running);
-
--    if(!_ready.empty()) {
--        Thread * prev = _running;
--        prev->_state = FINISHING;
--        *reinterpret_cast<int *>(prev->_stack) = status;
--
--        _running = _ready.remove()->object();
--        _running->_state = RUNNING;
--
--        dispatch(prev, _running);
--    } else {
--        db<Thread>(WRN) << "The last thread in the system has exited!" << endl;
--        if(reboot) {
--            db<Thread>(WRN) << "Rebooting the machine ..." << endl;
--            Machine::reboot();
--        } else {
--            db<Thread>(WRN) << "Halting the CPU ..." << endl;
--            CPU::halt();
+-    if(next_tick)
+-        next_tick--;
+-    if(!next_tick) {
+-        if(next_handler) {
+-            db<Alarm>(TRC) << "Alarm::handler(h=" << reinterpret_cast<void *>(next_handler) << ")" << endl;
+-            (*next_handler)();
 -        }
--    }
--
+-        if(_request.empty())
+-            next_handler = 0;
+-        else {
+-            Queue::Element * e = _request.remove();
+-            Alarm * alarm = e->object();
+-            next_tick = alarm->_ticks;
+-            next_handler = alarm->_handler;
+-            if(alarm->_times != -1)
+-                alarm->_times--;
+-            if(alarm->_times) {
++    HList handler;
++
++    if(!_request.empty()) {
++        _request.head()->promote();
++        while(_request.head()->rank() <= 0) {
++            Queue::Element* e = _request.remove();
++            Alarm* alarm = e->object();
++
++            handler.insert(new (kmalloc(sizeof(HList::Element))) HList::Element(alarm->_handler));
++            
++            alarm->_times--;
++            if(alarm->_times > 0) {
+                 e->rank(alarm->_ticks);
+                 _request.insert(e);
+             }
+@@ -96,6 +103,11 @@ void Alarm::handler(const IC::Interrupt_Id & i)
+     }
+ 
      unlock();
- }
- 
-@@ -232,11 +258,25 @@
- {
-     db<Thread>(TRC) << "Thread::idle()" << endl;
- 
-+    while (_active_count > 1) { // if there is only the idle/main thread
-+        CPU::int_enable();
-+        CPU::halt();
 +
-+        if (_ready.size() > 1) { // idle thread is always ready
-+            yield(); // force rescheduling
-+        }
++    for (HList::Iterator it = handler.begin(); it != handler.end(); ++it) {
++        Handler * h = it->object();
++        (*h)();
 +    }
-+
-     db<Thread>(INF) << "There are no runnable threads at the moment!" << endl;
--    db<Thread>(INF) << "Halting the CPU ..." << endl;
-+    CPU::int_disable();
-
--    CPU::int_enable();
--    CPU::halt();
-+    if (reboot) {
-+        db<Thread>(INF) << "Rebooting the CPU ..." << endl;
-+        Machine::reboot();
-+    } else {
-+        db<Thread>(INF) << "Halting the CPU ..." << endl;
-+    }
-+    CPU::halt(); // halting without interruption = tango down
- 
-     return 0;
  }
-Index: src/abstraction/thread_init.cc
-===================================================================
---- src/abstraction/thread_init.cc	(revision 3687)
-+++ src/abstraction/thread_init.cc	(working copy)
-@@ -17,6 +17,8 @@
-     // neither by IDLE (which has a lower priority)
-     if(preemptive)
-         _timer = new (kmalloc(sizeof(Scheduler_Timer))) Scheduler_Timer(QUANTUM, time_slicer);
-+
-+    new (kmalloc(sizeof(Thread))) Thread(Configuration(READY, IDLE), &idle);
- }
-
- __END_SYS
-Index: src/init/init_first.cc
-===================================================================
---- src/init/init_first.cc	(revision 3687)
-+++ src/init/init_first.cc	(working copy)
-@@ -28,7 +28,7 @@
-         // If EPOS is not a kernel, then adjust the application entry point to __epos_app_entry,
-         // which will directly call main(). In this case, _init will have already been called,
-         // before Init_Application, to construct main()'s global objects.
--        Thread::_running = new (kmalloc(sizeof(Thread))) Thread(Thread::Configuration(Thread::RUNNING, Thread::NORMAL), reinterpret_cast<int (*)()>(__epos_app_entry));
-+        Thread::_running = new (kmalloc(sizeof(Thread))) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), reinterpret_cast<int (*)()>(__epos_app_entry));
-
-         db<Init>(INF) << "done!" << endl;
- 

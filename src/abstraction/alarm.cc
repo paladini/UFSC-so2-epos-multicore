@@ -87,7 +87,8 @@ void Alarm::handler(const IC::Interrupt_Id & i)
     HList handler;
 
     if(!_request.empty()) {
-        while(_request.head()->promote() <= 0) {
+        _request.head()->promote();
+        while(_request.head()->rank() <= 0) {
             Queue::Element* e = _request.remove();
             Alarm* alarm = e->object();
 

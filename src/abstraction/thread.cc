@@ -75,18 +75,6 @@ Thread::~Thread()
     kfree(_stack);
 }
 
-// https://computing.llnl.gov/tutorials/pthreads/
-// http://stackoverflow.com/questions/6979796/what-are-the-main-uses-of-yield-and-how-does-it-differ-from-join-and-interr
-/*
-TODO: 
-    * Falar no relatório sobre uma thread não poder dar Join em si mesma (implementar isso com assert?)
-    * Tentar pensar em uma solução de join circular (se thread A dá join em B, B não pode dra join em A)
-    * É interessante escrever asserções (assert) pelos motivos falados pelo Guto, ele deve considerar mais isso.
-    * Implementar o(s) destrutor(es) [NÃO ESQUECER] 
-    * NÃO UTILIZAR fila, pois ele vai perder os ponteiros de "next" e "prev" do elemento (caso o _link esteja em mais de uma Queue). Inverter a relação e não utilizar lista, utilizar apenas um atributo Thread dentro da Thread.h.
-
-O EPOS não possui NULL? Wtf.
-*/
 int Thread::join()
 {
     lock();
