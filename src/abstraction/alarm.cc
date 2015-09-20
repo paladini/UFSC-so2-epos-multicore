@@ -1,8 +1,8 @@
 // EPOS Alarm Abstraction Implementation
 
-#include <semaphore.h>
 #include <alarm.h>
 #include <display.h>
+#include <thread.h>
 
 __BEGIN_SYS
 
@@ -43,14 +43,26 @@ Alarm::~Alarm()
 }
 
 
+class SuspendHandler : public Handler
+{
+public:
+    SuspendHandler(Thread * thread) : _thread(thread) {}
+    void operator()() { _thread->resume(); }
+
+private:
+    Thread * _thread;
+};
+
+
 // Class methods
 void Alarm::delay(const Microsecond & time)
 {
     db<Alarm>(TRC) << "Alarm::delay(time=" << time << ")" << endl;
 
-    Tick t = _elapsed + ticks(time);
-
-    while(_elapsed < t);
+    Thread * self = Thread::self();
+    SuspendHandler sh(self);
+    Alarm alarm(time, &sh, 1);
+    self->suspend();
 }
 
 

@@ -7,7 +7,12 @@
 
 __BEGIN_UTIL
 
-typedef void (Handler)();
+class Handler
+{
+public:
+    Handler() {}
+    virtual void operator()() = 0;
+};
 
 __END_UTIL
 
