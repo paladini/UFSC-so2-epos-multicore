@@ -69,6 +69,10 @@ Thread::~Thread()
     if(waiting_semaphore)
     	waiting_semaphore->remove(this);
 
+    if(waiting_join){
+    	waiting_join->joined.remove(this);
+    }
+
     addAllToReady(&joined);
 
     unlock();
@@ -80,6 +84,7 @@ void Thread::addAllToReady(Queue* queue){
 	while(!queue->empty()){
 		Thread* resume = queue->remove()->object();
 		resume->_state = READY;
+		resume->waiting_join = 0;
 		_ready.insert(&resume->_link);
 	}
 }
@@ -93,6 +98,7 @@ int Thread::join()
     if(_running != this && _state != FINISHING){
     	Thread* prev = _running;
     	prev->_state = WAITING;
+    	prev->waiting_join = this;
     	joined.insert(&prev->_link);
 
     	_running = _ready.remove()->object();
