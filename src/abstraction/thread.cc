@@ -66,8 +66,8 @@ Thread::~Thread()
     _ready.remove(this);
     _suspended.remove(this);
 
-    if(_waiting)
-    	_waiting->remove(this);
+    if(waiting_semaphore)
+    	waiting_semaphore->remove(this);
 
     addAllToReady(&joined);
 
