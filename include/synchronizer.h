@@ -31,7 +31,8 @@ protected:
         begin_atomic();
 
         Thread* previous = Thread::running();
-        previous->_state = Thread::WAITING;  
+        previous->_state = Thread::WAITING;
+        previous->_waiting = &queue;
         queue.insert(&previous->_link);
 
 		Thread::_running = Thread::_ready.remove()->object();
@@ -68,6 +69,7 @@ protected:
     void wakeupThread(){
         Thread* syncThread = queue.remove()->object();
         syncThread->_state = Thread::READY;
+        syncThread->_waiting = 0;
         Thread::_ready.insert(&syncThread->_link);
     }
 

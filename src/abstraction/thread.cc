@@ -66,6 +66,9 @@ Thread::~Thread()
     _ready.remove(this);
     _suspended.remove(this);
 
+    if(_waiting)
+    	_waiting->remove(this);
+
     addAllToReady(&joined);
 
     unlock();
