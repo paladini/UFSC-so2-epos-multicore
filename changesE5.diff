@@ -1,0 +1,87 @@
+diff --git a/include/synchronizer.h b/include/synchronizer.h
+index 8894c7e..3370816 100644
+--- a/include/synchronizer.h
++++ b/include/synchronizer.h
+@@ -31,7 +31,8 @@ protected:
+         begin_atomic();
+ 
+         Thread* previous = Thread::running();
+-        previous->_state = Thread::WAITING;  
++        previous->_state = Thread::WAITING;
++        previous->waiting_semaphore = &queue;
+         queue.insert(&previous->_link);
+ 
+ 		Thread::_running = Thread::_ready.remove()->object();
+@@ -68,6 +69,7 @@ protected:
+     void wakeupThread(){
+         Thread* syncThread = queue.remove()->object();
+         syncThread->_state = Thread::READY;
++        syncThread->waiting_semaphore = 0;
+         Thread::_ready.insert(&syncThread->_link);
+     }
+ 
+diff --git a/include/thread.h b/include/thread.h
+index ab71f56..de1fdf6 100644
+--- a/include/thread.h
++++ b/include/thread.h
+@@ -109,6 +109,8 @@ protected:
+     Context * volatile _context;
+     volatile State _state;
+     Queue::Element _link;
++    Queue* waiting_semaphore;
++    Thread* volatile waiting_join;
+ 
+     static volatile unsigned int _thread_count;
+     static Scheduler_Timer * _timer;
+@@ -123,7 +125,7 @@ private:
+ 
+ template<typename ... Tn>
+ inline Thread::Thread(int (* entry)(Tn ...), Tn ... an)
+-: _state(READY), _link(this, NORMAL)
++: _state(READY), _link(this, NORMAL), waiting_semaphore(0), waiting_join(0)
+ {
+     constructor_prolog(STACK_SIZE);
+     _context = CPU::init_stack(_stack + STACK_SIZE, &__exit, entry, an ...);
+@@ -132,7 +134,7 @@ inline Thread::Thread(int (* entry)(Tn ...), Tn ... an)
+ 
+ template<typename ... Tn>
+ inline Thread::Thread(const Configuration & conf, int (* entry)(Tn ...), Tn ... an)
+-: _state(conf.state), _link(this, conf.priority)
++: _state(conf.state), _link(this, conf.priority), waiting_semaphore(0), waiting_join(0)
+ {
+     constructor_prolog(conf.stack_size);
+     _context = CPU::init_stack(_stack + conf.stack_size, &__exit, entry, an ...);
+diff --git a/src/abstraction/thread.cc b/src/abstraction/thread.cc
+index 01b9992..d9ef905 100644
+--- a/src/abstraction/thread.cc
++++ b/src/abstraction/thread.cc
+@@ -66,6 +66,13 @@ Thread::~Thread()
+     _ready.remove(this);
+     _suspended.remove(this);
+ 
++    if(waiting_semaphore)
++    	waiting_semaphore->remove(this);
++
++    if(waiting_join){
++    	waiting_join->joined.remove(this);
++    }
++
+     addAllToReady(&joined);
+ 
+     unlock();
+@@ -77,6 +84,7 @@ void Thread::addAllToReady(Queue* queue){
+ 	while(!queue->empty()){
+ 		Thread* resume = queue->remove()->object();
+ 		resume->_state = READY;
++		resume->waiting_join = 0;
+ 		_ready.insert(&resume->_link);
+ 	}
+ }
+@@ -90,6 +98,7 @@ int Thread::join()
+     if(_running != this && _state != FINISHING){
+     	Thread* prev = _running;
+     	prev->_state = WAITING;
++    	prev->waiting_join = this;
+     	joined.insert(&prev->_link);
+ 
+     	_running = _ready.remove()->object();
