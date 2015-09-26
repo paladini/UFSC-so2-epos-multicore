@@ -98,6 +98,7 @@ veryclean: clean
 		find $(TOP) -name "*_test_traits.h" -type f -perm 755 -exec $(CLEAN) {} \;
 
 dist: veryclean
+		mkdir -p $(LIB)
 		find $(TOP) -name ".*project" -exec $(CLEAN) {} \;
 		find $(TOP) -name CVS -type d -print | xargs $(CLEANDIR)
 		find $(TOP) -name .svn -type d -print | xargs $(CLEANDIR)

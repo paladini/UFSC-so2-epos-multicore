@@ -3,7 +3,6 @@
 #include <semaphore.h>
 #include <alarm.h>
 #include <display.h>
-#include <semaphore_handler.h>
 
 __BEGIN_SYS
 
@@ -27,7 +26,7 @@ Alarm::Alarm(const Microsecond & time, Handler * handler, int times)
         unlock();
     } else {
         unlock();
-        handler->handler();
+        (*handler)();
     }
 }
 
@@ -51,7 +50,7 @@ void Alarm::delay(const Microsecond & time)
 
     Semaphore semaphore(0);
     Semaphore_Handler handler(&semaphore);
-    Alarm alarm(time, &handler, 1);
+    Alarm alarm(time, &handler, 1); // if time < tick trigger v()
     semaphore.p();
 }
 
@@ -71,22 +70,28 @@ void Alarm::handler(const IC::Interrupt_Id & i)
         display.position(lin, col);
     }
 
-    Alarm* alarm = 0;
-    if(!_request.empty() && _request.head()->promote() <= 0) {
-    	Queue::Element* e = _request.remove();
-    	alarm = e->object();
-		if(alarm->_times != -1)
-			alarm->_times--;
-		if(alarm->_times) {
-			e->rank(alarm->_ticks);
-			_request.insert(e);
-		}
+    Alarm * alarm = 0;
+
+    if(!_request.empty()) {
+        // Replacing the following "if" by a "while" loop is tempting, but recovering the lock and dispatching the handler is
+        // troublesome if the Alarm gets destroyed in between, like is the case for the idle thread returning to shutdown the machine
+        if(_request.head()->promote() <= 0) { // rank can be negative whenever multiple handlers get created for the same time tick
+            Queue::Element * e = _request.remove();
+            alarm = e->object();
+            if(alarm->_times != INFINITE)
+                alarm->_times--;
+            if(alarm->_times) {
+                e->rank(alarm->_ticks);
+                _request.insert(e);
+            }
+        }
     }
 
     unlock();
 
     if(alarm) {
-    	alarm->_handler->handler();
+        db<Alarm>(TRC) << "Alarm::handler(this=" << alarm << ",e=" << _elapsed << ",h=" << reinterpret_cast<void*>(alarm->handler) << ")" << endl;
+        (*alarm->_handler)();
     }
 }
 

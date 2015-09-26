@@ -20,6 +20,8 @@ app/philosophers_dinner
 app/philosophers_dinner_traits.h
 app/producer_consumer
 app/producer_consumer_traits.h
+app/alarm_test
+app/alarm_test_traits.h
 
 #eclipse
 .cproject

@@ -11,12 +11,11 @@ __BEGIN_SYS
 class Synchronizer_Common
 {
 protected:
+    typedef Thread::Queue Queue;
+
+protected:
     Synchronizer_Common() {}
-    ~Synchronizer_Common() {
-        begin_atomic();
-        wakeup_all();
-        end_atomic();
-    }
+    ~Synchronizer_Common() { begin_atomic(); wakeup_all(); }
 
     // Atomic operations
     bool tsl(volatile bool & lock) { return CPU::tsl(lock); }
@@ -27,54 +26,12 @@ protected:
     void begin_atomic() { Thread::lock(); }
     void end_atomic() { Thread::unlock(); }
 
-    void sleep() { 
-        begin_atomic();
-
-        Thread* previous = Thread::running();
-        previous->_state = Thread::WAITING;
-        previous->waiting_semaphore = &queue;
-        queue.insert(&previous->_link);
-
-		Thread::_running = Thread::_ready.remove()->object();
-		Thread::_running->_state = Thread::RUNNING;
-		Thread::dispatch(previous, Thread::_running);
-
-        end_atomic();
-    } 
-    void wakeup() { 
-        begin_atomic();
-
-        if(!queue.empty()) {
-            wakeupThread();
-        }
-
-        end_atomic();
-
-        if(Thread::preemptive)
-            Thread::reschedule();
-    }
-    void wakeup_all() { 
-        begin_atomic();
-
-        while(!queue.empty()) {
-            wakeupThread();
-        }
-
-        end_atomic();
-
-        if(Thread::preemptive)
-            Thread::reschedule();
-    }
-
-    void wakeupThread(){
-        Thread* syncThread = queue.remove()->object();
-        syncThread->_state = Thread::READY;
-        syncThread->waiting_semaphore = 0;
-        Thread::_ready.insert(&syncThread->_link);
-    }
+    void sleep() { Thread::sleep(&_queue); }
+    void wakeup() { Thread::wakeup(&_queue); }
+    void wakeup_all() { Thread::wakeup_all(&_queue); }
 
 private:
-    Thread::Queue queue;
+    Queue _queue;
 };
 
 __END_SYS

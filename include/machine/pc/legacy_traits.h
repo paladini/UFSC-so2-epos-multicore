@@ -52,8 +52,9 @@ template<> struct Traits<PC>: public Traits<PC_Common>
 
 template<> struct Traits<PC_PCI>: public Traits<PC_Common>
 {
-    static const int MAX_BUS = 0;
+    static const int MAX_BUS = 16;
     static const int MAX_DEV_FN = 0xff;
+    static const unsigned int MAX_REGION_SIZE = 0x04000000; // 64 MB
 };
 
 template<> struct Traits<PC_IC>: public Traits<PC_Common>
@@ -106,6 +107,14 @@ template<> struct Traits<PC_Display>: public Traits<PC_Common>
     static const int LINES = 25;
     static const int TAB_SIZE = 8;
     static const unsigned int FRAME_BUFFER_ADDRESS = 0xb8000;
+    static const unsigned int FRAME_BUFFER_SIZE = 64 * 1024; // 64 KB
+};
+
+template<> struct Traits<PC_Scratchpad>: public Traits<PC_Common>
+{
+    static const bool enabled = false;
+    static const unsigned int ADDRESS = Traits<PC_Display>::FRAME_BUFFER_ADDRESS;
+    static const unsigned int SIZE = Traits<PC_Display>::FRAME_BUFFER_SIZE;
 };
 
 __END_SYS
