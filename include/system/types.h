@@ -12,6 +12,24 @@ extern "C"
     void free(void *);
 }
 
+__BEGIN_API
+
+enum Heap_System {
+	SYSTEM
+};
+
+enum Heap_Uncached {
+	UNCACHED
+};
+
+__END_API
+
+void * operator new(size_t, const _API::Heap_System &);
+void * operator new[](size_t, const _API::Heap_System &);
+
+void * operator new(size_t, const _API::Heap_Uncached &);
+void * operator new[](size_t, const _API::Heap_Uncached &);
+
 inline void * operator new(size_t s, void * a) { return a; }
 inline void * operator new[](size_t s, void * a) { return a; }
 

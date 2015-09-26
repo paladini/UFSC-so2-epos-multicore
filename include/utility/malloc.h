@@ -5,6 +5,7 @@
 
 #include <utility/string.h>
 #include <application.h>
+#include <system.h>
 
 extern "C"
 {
@@ -22,7 +23,11 @@ extern "C"
 
     inline void free(void * ptr) {
         __USING_SYS;
-        Application::_heap->free(ptr);
+        if(Traits<System>::multiheap)
+        	Heap::heap_free(ptr);
+        else
+        	System::_heap->free(ptr);
+
     }
 }
 

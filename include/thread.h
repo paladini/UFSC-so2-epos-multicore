@@ -7,7 +7,6 @@
 #include <utility/handler.h>
 #include <cpu.h>
 #include <machine.h>
-#include <system/kmalloc.h>
 
 extern "C" { void __exit(); }
 

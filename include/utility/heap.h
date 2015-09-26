@@ -13,6 +13,8 @@ __BEGIN_UTIL
 class Heap: private Grouping_List<char>
 {
 public:
+	static const bool typed_heap = Traits<System>::multiheap;
+
     using Grouping_List<char>::empty;
     using Grouping_List<char>::size;
 
@@ -35,6 +37,8 @@ public:
         if(!Traits<CPU>::unaligned_memory_access)
             while((bytes % sizeof(void *)))
                 ++bytes;
+        if(typed_heap)
+        	bytes += sizeof(void*);
 
         bytes += sizeof(int);         // add room for size
         if(bytes < sizeof(Element))
@@ -47,6 +51,9 @@ public:
         }
 
         int * addr = reinterpret_cast<int *>(e->object() + e->size());
+
+        if(typed_heap)
+        	*addr++ = reinterpret_cast<int>(this);
 
         *addr++ = bytes;
 
@@ -66,9 +73,16 @@ public:
     }
 
     void free(void * ptr) {
+		int * addr = reinterpret_cast<int *>(ptr);
+		unsigned int bytes = *--addr;
+		free(addr, bytes);
+	}
+
+    static void heap_free(void * ptr) {
         int * addr = reinterpret_cast<int *>(ptr);
         unsigned int bytes = *--addr;
-        free(addr, bytes);
+        Heap* heap = reinterpret_cast<Heap*>(*--addr);
+        heap->free(addr, bytes);
     }
 
 private:
