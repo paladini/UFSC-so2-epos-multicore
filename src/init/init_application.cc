@@ -19,6 +19,7 @@ public:
 	// Initialize Application's heap
 	db<Init>(INF) << "Initializing application's heap" << endl;
 	Application::_heap = new (&Application::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
+	Application::_uncachedHeap = new (&Application::_preheap[sizeof(Heap)]) UncachedHeap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
 
 	db<Init>(INF) << "done!" << endl;
     }

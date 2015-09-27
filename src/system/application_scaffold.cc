@@ -8,6 +8,7 @@ __BEGIN_SYS
 // Application class attributes
 char Application::_preheap[];
 Heap * Application::_heap;
+UncachedHeap * Application::_uncachedHeap;
 
 __END_SYS
 
