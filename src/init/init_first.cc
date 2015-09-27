@@ -1,7 +1,7 @@
 // EPOS First Thread Initializer
 
 #include <utility/heap.h>
-#include <system/kmalloc.h>
+#include <system.h>
 #include <thread.h>
 
 extern "C" { void __epos_app_entry(); }
@@ -28,7 +28,7 @@ public:
         // If EPOS is not a kernel, then adjust the application entry point to __epos_app_entry,
         // which will directly call main(). In this case, _init will have already been called,
         // before Init_Application, to construct main()'s global objects.
-        Thread::_running = new (kmalloc(sizeof(Thread))) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), reinterpret_cast<int (*)()>(__epos_app_entry));
+        Thread::_running = new (KERNEL) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), reinterpret_cast<int (*)()>(__epos_app_entry));
 
         db<Init>(INF) << "done!" << endl;
 

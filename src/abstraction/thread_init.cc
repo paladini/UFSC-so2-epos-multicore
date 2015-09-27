@@ -1,6 +1,5 @@
 // EPOS Thread Abstraction Initialization
 
-#include <system/kmalloc.h>
 #include <system.h>
 #include <thread.h>
 #include <alarm.h>
@@ -16,9 +15,9 @@ void Thread::init()
     // MAIN is created first and dispatch won't replace it nor by itself
     // neither by IDLE (which has a lower priority)
     if(preemptive)
-        _timer = new (kmalloc(sizeof(Scheduler_Timer))) Scheduler_Timer(QUANTUM, time_slicer);
+        _timer = new (KERNEL) Scheduler_Timer(QUANTUM, time_slicer);
 
-    new (kmalloc(sizeof(Thread))) Thread(Configuration(READY, IDLE), &idle);
+    new (KERNEL) Thread(Configuration(READY, IDLE), &idle);
 }
 
 __END_SYS

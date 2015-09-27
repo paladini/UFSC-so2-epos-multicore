@@ -3,6 +3,7 @@
 #include <alarm.h>
 #include <display.h>
 #include <thread.h>
+#include <system.h>
 #include <utility/list.h>
 
 __BEGIN_SYS
@@ -92,7 +93,7 @@ void Alarm::handler(const IC::Interrupt_Id & i)
             Queue::Element* e = _request.remove();
             Alarm* alarm = e->object();
 
-            handler.insert(new (kmalloc(sizeof(HList::Element))) HList::Element(alarm->_handler));
+            handler.insert(new (KERNEL) HList::Element(alarm->_handler));
             
             alarm->_times--;
             if(alarm->_times > 0) {

@@ -1,9 +1,9 @@
 // EPOS Thread Abstraction Implementation
 
-#include <system/kmalloc.h>
 #include <machine.h>
 #include <mutex.h>
 #include <thread.h>
+#include <system.h>
 
 // This_Thread class attributes
 __BEGIN_UTIL
@@ -26,8 +26,8 @@ void Thread::constructor_prolog(unsigned int stack_size)
     lock();
 
     ++_active_count;
-    _stack = reinterpret_cast<char *>(kmalloc(stack_size));
-    _joined = new (kmalloc(sizeof(Mutex))) Mutex();
+    _stack = reinterpret_cast<char *>(KERNEL);
+    _joined = new (KERNEL) Mutex();
 }
 
 
@@ -72,7 +72,7 @@ Thread::~Thread()
 
     unlock();
 
-    kfree(_stack);
+    delete _stack;
 }
 
 int Thread::join()
@@ -152,7 +152,7 @@ void Thread::resume()
 void Thread::sleep(Thread::Queue& queue)
 {
     Thread* t = _running->_link.object();
-    Queue::Element* el = new (kmalloc(sizeof(Queue::Element))) Queue::Element(t);
+    Queue::Element* el = new (KERNEL) Queue::Element(t);
     queue.insert(el);
     _running->suspend();
 }
