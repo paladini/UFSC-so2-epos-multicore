@@ -5,14 +5,13 @@
 
 #include <utility/string.h>
 #include <application.h>
-#include <system.h>
 
 extern "C"
 {
     // Standard C Library allocators
     inline void * malloc(size_t bytes) {
         __USING_SYS;
-        return System::_heap->alloc(bytes);
+        return Application::_heap->alloc(bytes);
     }
 
     inline void * calloc(size_t n, unsigned int bytes) {

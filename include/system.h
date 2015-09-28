@@ -4,6 +4,7 @@
 #define __system_h
 
 #include <utility/heap.h>
+#include <segment.h>
 
 __BEGIN_SYS
 
@@ -11,12 +12,8 @@ class System
 {
     friend class Init_System;
     friend class Init_Application;
-    friend void * ::malloc(size_t);
-	friend void ::free(void *);
     friend void * ::operator new(size_t, const EPOS::Heap_System &);
     friend void * ::operator new[](size_t, const EPOS::Heap_System &);
-    friend void ::operator delete(void *);
-	friend void ::operator delete[](void *);
 
 public:
     static System_Info<Machine> * const info() { assert(_si); return _si; }
@@ -26,7 +23,7 @@ private:
 
 private:
     static System_Info<Machine> * _si;
-    static char _preheap[sizeof(Heap)];
+    static char _preheap[sizeof(Segment) + sizeof(Heap)];
     static Heap * _heap;
 };
 

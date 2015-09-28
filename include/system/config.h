@@ -7,15 +7,15 @@
 // ARCHITECTURE, MACHINE, AND APPLICATION SELECTION
 // This section is generated automatically from makedefs by $EPOS/etc/makefile
 //============================================================================
-#define MODE xxx
-#define ARCH xxx
-#define MACH xxx
-#define MMOD xxx
-#define APPL xxx
-#define __mode_xxx__
-#define __arch_xxx__
-#define __mach_xxx__
-#define __mmod_xxx__
+#define MODE library
+#define ARCH ia32
+#define MACH pc
+#define MMOD legacy
+#define APPL alarm_test
+#define __mode_library__
+#define __arch_ia32__
+#define __mach_pc__
+#define __mmod_legacy__
 
 #if defined (__arch_avr__) || defined (__mmod_lm3s811__)
 #define __no_networking__

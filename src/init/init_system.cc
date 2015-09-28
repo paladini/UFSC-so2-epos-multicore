@@ -3,6 +3,7 @@
 #include <utility/random.h>
 #include <machine.h>
 #include <system.h>
+#include <address_space.h>
 
 __BEGIN_SYS
 
@@ -22,7 +23,8 @@ public:
 
         // Initialize System's heap
         db<Init>(INF) << "Initializing system's heap: " << endl;
-        System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
+        Segment* seg = new (&System::_preheap[0]) Segment(HEAP_SIZE);
+        System::_heap = new (&System::_preheap[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(seg), seg->size());
         db<Init>(INF) << "done!" << endl;
 
         // Initialize the machine
