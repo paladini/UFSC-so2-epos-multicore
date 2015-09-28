@@ -26,6 +26,7 @@ void Thread::constructor_prolog(unsigned int stack_size)
     lock();
 
     ++_active_count;
+    db<Thread>(INF) << _active_count << " active threads now." << endl;
     _stack = reinterpret_cast<char *>(KERNEL);
     _joined = new (KERNEL) Mutex();
 }
@@ -69,6 +70,7 @@ Thread::~Thread()
 
     delete _joined;
     --_active_count;
+    db<Thread>(INF) << _active_count << " active threads now." << endl;
 
     unlock();
 

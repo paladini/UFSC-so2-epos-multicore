@@ -30,12 +30,16 @@ __END_SYS
 
 inline void * operator new(size_t bytes, const Kernel_Alloc&) {
     __USING_SYS
-    return System::_heap->alloc(bytes);
+    void * addr = System::_heap->alloc(bytes);
+    db<System>(INF) << "System::operator new(bytes=" << bytes << ") => " << addr << endl;
+    return addr;
 }
 
 inline void * operator new[](size_t bytes, const Kernel_Alloc&) {
     __USING_SYS
-    return System::_heap->alloc(bytes);
+    void * addr = System::_heap->alloc(bytes);
+    db<System>(INF) << "System::operator new[](bytes=" << bytes << ") => " << addr << endl;
+    return addr;
 }
 
 #endif

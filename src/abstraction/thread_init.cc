@@ -15,8 +15,10 @@ void Thread::init()
     // MAIN is created first and dispatch won't replace it nor by itself
     // neither by IDLE (which has a lower priority)
     if(preemptive)
+        db<Init>(INF) << "Initializing the scheduler timer thread: " << endl;
         _timer = new (KERNEL) Scheduler_Timer(QUANTUM, time_slicer);
 
+    db<Init>(INF) << "Initializing the idle thread: " << endl;
     new (KERNEL) Thread(Configuration(READY, IDLE), &idle);
 }
 
