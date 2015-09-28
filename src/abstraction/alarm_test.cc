@@ -5,7 +5,7 @@
 
 using namespace EPOS;
 
-const int iterations = 10;
+const int iterations = 1;
 
 void func_a(void);
 void func_b(void);
@@ -20,7 +20,7 @@ int main()
     cout << "I'll now create two alarms and put myself in a delay ..." << endl;
 
     Function_Handler handler_a(&func_a);
-    Alarm alarm_a(2000000, &handler_a, iterations);
+    Alarm* alarm_a = new (SYSTEM) Alarm(2000000, &handler_a, iterations);
 
     Function_Handler handler_b(&func_b);
     Alarm alarm_b(1000000, &handler_b, iterations);
@@ -30,6 +30,7 @@ int main()
     // of the idle thread!
     Alarm::delay(2000000 * (iterations + 2));
 
+    delete alarm_a;
     cout << "I'm done, bye!" << endl;
 
     return 0;

@@ -12,7 +12,7 @@ extern "C"
     // Standard C Library allocators
     inline void * malloc(size_t bytes) {
         __USING_SYS;
-	return Application::_heap->alloc(bytes);
+        return System::_heap->alloc(bytes);
     }
 
     inline void * calloc(size_t n, unsigned int bytes) {
@@ -23,11 +23,7 @@ extern "C"
 
     inline void free(void * ptr) {
         __USING_SYS;
-        if(Traits<System>::multiheap)
-        	Heap::heap_free(ptr);
-        else
-        	System::_heap->free(ptr);
-
+       	Heap::free(ptr);
     }
 }
 

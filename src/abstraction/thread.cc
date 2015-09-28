@@ -26,7 +26,7 @@ void Thread::constructor_prolog(unsigned int stack_size)
 
     _thread_count++;
 
-    _stack = new (SYSTEM) char(stack_size);
+    _stack = new (SYSTEM) char[stack_size];
 }
 
 
