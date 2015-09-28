@@ -1,0 +1,433 @@
+diff --git a/include/application.h b/include/application.h
+index b7457b6..9cec645 100644
+--- a/include/application.h
++++ b/include/application.h
+@@ -4,6 +4,7 @@
+ #define __application_h
+ 
+ #include <utility/heap.h>
++#include <segment.h>
+ 
+ extern "C"
+ {
+@@ -17,18 +18,26 @@ class Application
+ {
+     friend class Init_Application;
+     friend void * ::malloc(size_t);
+-    friend void ::free(void *);
++    friend void * ::operator new(size_t, const EPOS::Heap_Uncached&);
++    friend void * ::operator new[](size_t, const EPOS::Heap_Uncached&);
+ 
+ private:
+     static void init();
+ 
+ private:
+-    static char _preheap[sizeof(Heap)];
++    static char _preheap[sizeof(Segment) + sizeof(Heap)];
+     static Heap * _heap;
++    static char _uncached_preheap[sizeof(Segment) + sizeof(Heap)];
++    static Heap* _uncached_heap;
+ };
+ 
+ __END_SYS
+ 
+-#include <utility/malloc.h>
++inline void * operator new(size_t bytes, const EPOS::Heap_Uncached&) {
++	return EPOS::Application::_uncached_heap->alloc(bytes);
++}
++inline void * operator new[](size_t bytes, const EPOS::Heap_Uncached&) {
++	return EPOS::Application::_uncached_heap->alloc(bytes);
++}
+ 
+ #endif
+diff --git a/include/system.h b/include/system.h
+index 1b80e10..7cf0fa9 100644
+--- a/include/system.h
++++ b/include/system.h
+@@ -4,6 +4,7 @@
+ #define __system_h
+ 
+ #include <utility/heap.h>
++#include <segment.h>
+ 
+ __BEGIN_SYS
+ 
+@@ -11,8 +12,8 @@ class System
+ {
+     friend class Init_System;
+     friend class Init_Application;
+-    friend void * kmalloc(size_t);
+-    friend void kfree(void *);
++    friend void * ::operator new(size_t, const EPOS::Heap_System &);
++    friend void * ::operator new[](size_t, const EPOS::Heap_System &);
+ 
+ public:
+     static System_Info<Machine> * const info() { assert(_si); return _si; }
+@@ -22,10 +23,17 @@ private:
+ 
+ private:
+     static System_Info<Machine> * _si;
+-    static char _preheap[sizeof(Heap)];
++    static char _preheap[sizeof(Segment) + sizeof(Heap)];
+     static Heap * _heap;
+ };
+ 
+ __END_SYS
+ 
++inline void * operator new(size_t bytes, const EPOS::Heap_System &) {
++	return EPOS::System::_heap->alloc(bytes);
++}
++inline void * operator new[](size_t bytes, const EPOS::Heap_System &) {
++	return EPOS::System::_heap->alloc(bytes);
++}
++
+ #endif
+diff --git a/include/system/kmalloc.h b/include/system/kmalloc.h
+deleted file mode 100644
+index 4f8e7a9..0000000
+--- a/include/system/kmalloc.h
++++ /dev/null
+@@ -1,20 +0,0 @@
+-// EPOS System-level Dynamic Memory Declarations
+-
+-#ifndef __kmalloc_h
+-#define __kmalloc_h
+-
+-#include <system.h>
+-
+-__BEGIN_SYS
+-
+-inline void * kmalloc(size_t bytes) {
+-    return System::_heap->alloc(bytes);
+-}
+-
+-inline void kfree(void * ptr) {
+-    System::_heap->free(ptr);
+-}
+-
+-__END_SYS
+-
+-#endif
+diff --git a/include/system/types.h b/include/system/types.h
+index f166866..3d7049d 100644
+--- a/include/system/types.h
++++ b/include/system/types.h
+@@ -12,6 +12,24 @@ extern "C"
+     void free(void *);
+ }
+ 
++__BEGIN_API
++
++enum Heap_System {
++	SYSTEM
++};
++
++enum Heap_Uncached {
++	UNCACHED
++};
++
++__END_API
++
++void * operator new(size_t, const _API::Heap_System &);
++void * operator new[](size_t, const _API::Heap_System &);
++
++void * operator new(size_t, const _API::Heap_Uncached &);
++void * operator new[](size_t, const _API::Heap_Uncached &);
++
+ inline void * operator new(size_t s, void * a) { return a; }
+ inline void * operator new[](size_t s, void * a) { return a; }
+ 
+diff --git a/include/thread.h b/include/thread.h
+index 1def7b5..d959c47 100644
+--- a/include/thread.h
++++ b/include/thread.h
+@@ -7,7 +7,6 @@
+ #include <utility/handler.h>
+ #include <cpu.h>
+ #include <machine.h>
+-#include <system/kmalloc.h>
+ 
+ extern "C" { void __exit(); }
+ 
+diff --git a/include/utility/heap.h b/include/utility/heap.h
+index a5f69a8..cd75109 100644
+--- a/include/utility/heap.h
++++ b/include/utility/heap.h
+@@ -36,6 +36,7 @@ public:
+             while((bytes % sizeof(void *)))
+                 ++bytes;
+ 
++        bytes += sizeof(Heap*);
+         bytes += sizeof(int);         // add room for size
+         if(bytes < sizeof(Element))
+             bytes = sizeof(Element);
+@@ -48,6 +49,7 @@ public:
+ 
+         int * addr = reinterpret_cast<int *>(e->object() + e->size());
+ 
++        *addr++ = reinterpret_cast<int>(this);
+         *addr++ = bytes;
+ 
+         db<Heaps>(TRC) << ") => " << reinterpret_cast<void *>(addr) << endl;
+@@ -65,10 +67,11 @@ public:
+         }
+     }
+ 
+-    void free(void * ptr) {
++    static void free(void * ptr) {
+         int * addr = reinterpret_cast<int *>(ptr);
+         unsigned int bytes = *--addr;
+-        free(addr, bytes);
++        Heap* heap = reinterpret_cast<Heap*>(*--addr);
++        heap->free(addr, bytes);
+     }
+ 
+ private:
+diff --git a/include/utility/malloc.h b/include/utility/malloc.h
+index 2514e36..983d98d 100644
+--- a/include/utility/malloc.h
++++ b/include/utility/malloc.h
+@@ -11,7 +11,7 @@ extern "C"
+     // Standard C Library allocators
+     inline void * malloc(size_t bytes) {
+         __USING_SYS;
+-	return Application::_heap->alloc(bytes);
++        return Application::_heap->alloc(bytes);
+     }
+ 
+     inline void * calloc(size_t n, unsigned int bytes) {
+@@ -22,7 +22,7 @@ extern "C"
+ 
+     inline void free(void * ptr) {
+         __USING_SYS;
+-        Application::_heap->free(ptr);
++       	Heap::free(ptr);
+     }
+ }
+ 
+diff --git a/src/abstraction/alarm_init.cc b/src/abstraction/alarm_init.cc
+index e1c738b..37d7994 100644
+--- a/src/abstraction/alarm_init.cc
++++ b/src/abstraction/alarm_init.cc
+@@ -1,7 +1,7 @@
+ // EPOS Alarm Abstraction Initialization
+ 
+-#include <system/kmalloc.h>
+ #include <alarm.h>
++#include <system.h>
+ 
+ __BEGIN_SYS
+ 
+@@ -9,7 +9,7 @@ void Alarm::init()
+ {
+     db<Init, Alarm>(TRC) << "Alarm::init()" << endl;
+ 
+-    _timer = new (kmalloc(sizeof(Alarm_Timer))) Alarm_Timer(handler);
++    _timer = new (SYSTEM) Alarm_Timer(handler);
+ }
+ 
+ __END_SYS
+diff --git a/src/abstraction/alarm_test.cc b/src/abstraction/alarm_test.cc
+index bf488e9..1e47f6c 100644
+--- a/src/abstraction/alarm_test.cc
++++ b/src/abstraction/alarm_test.cc
+@@ -2,13 +2,15 @@
+ 
+ #include <utility/ostream.h>
+ #include <alarm.h>
++#include <system.h>
+ 
+ using namespace EPOS;
+ 
+-const int iterations = 10;
++const int iterations = 1;
+ 
+ void func_a(void);
+ void func_b(void);
++void func_c(void);
+ 
+ OStream cout;
+ 
+@@ -20,16 +22,22 @@ int main()
+     cout << "I'll now create two alarms and put myself in a delay ..." << endl;
+ 
+     Function_Handler handler_a(&func_a);
+-    Alarm alarm_a(2000000, &handler_a, iterations);
++    Alarm* alarm_a = new (UNCACHED) Alarm(2000000, &handler_a, iterations);
+ 
+     Function_Handler handler_b(&func_b);
+-    Alarm alarm_b(1000000, &handler_b, iterations);
++    Alarm* alarm_b = new Alarm(1000000, &handler_b, iterations);
++
++    Function_Handler handler_c(&func_c);
++    Alarm* alarm_c = new (SYSTEM) Alarm(1000000, &handler_c, iterations);
+ 
+     // Note that in case of idle-waiting, this thread will go into suspend
+     // and the alarm handlers above will trigger the functions in the context
+     // of the idle thread!
+     Alarm::delay(2000000 * (iterations + 2));
+ 
++    delete alarm_a;
++    delete alarm_b;
++    delete alarm_c;
+     cout << "I'm done, bye!" << endl;
+ 
+     return 0;
+@@ -48,3 +56,10 @@ void func_b(void)
+         cout << "b";
+     cout << endl;
+ }
++
++void func_c(void)
++{
++    for(int i = 0; i < 79; i++)
++        cout << "c";
++    cout << endl;
++}
+diff --git a/src/abstraction/thread.cc b/src/abstraction/thread.cc
+index ca9ea16..f092723 100644
+--- a/src/abstraction/thread.cc
++++ b/src/abstraction/thread.cc
+@@ -1,8 +1,8 @@
+ // EPOS Thread Abstraction Implementation
+ 
+-#include <system/kmalloc.h>
+ #include <machine.h>
+ #include <thread.h>
++#include <system.h>
+ 
+ // This_Thread class attributes
+ __BEGIN_UTIL
+@@ -26,7 +26,7 @@ void Thread::constructor_prolog(unsigned int stack_size)
+ 
+     _thread_count++;
+ 
+-    _stack = reinterpret_cast<char *>(kmalloc(stack_size));
++    _stack = new (SYSTEM) char[stack_size];
+ }
+ 
+ 
+@@ -94,7 +94,7 @@ Thread::~Thread()
+ 
+     unlock();
+ 
+-    kfree(_stack);
++    delete _stack;
+ }
+ 
+ 
+diff --git a/src/abstraction/thread_init.cc b/src/abstraction/thread_init.cc
+index 8a0fb90..d3c9fe4 100644
+--- a/src/abstraction/thread_init.cc
++++ b/src/abstraction/thread_init.cc
+@@ -1,6 +1,5 @@
+ // EPOS Thread Abstraction Initialization
+ 
+-#include <system/kmalloc.h>
+ #include <system.h>
+ #include <thread.h>
+ #include <alarm.h>
+@@ -16,7 +15,7 @@ void Thread::init()
+     // MAIN is created first and dispatch won't replace it nor by itself
+     // neither by IDLE (which has a lower priority)
+     if(preemptive)
+-        _timer = new (kmalloc(sizeof(Scheduler_Timer))) Scheduler_Timer(QUANTUM, time_slicer);
++        _timer = new (SYSTEM) Scheduler_Timer(QUANTUM, time_slicer);
+ }
+ 
+ __END_SYS
+diff --git a/src/init/init_application.cc b/src/init/init_application.cc
+index 864c466..cb6c913 100644
+--- a/src/init/init_application.cc
++++ b/src/init/init_application.cc
+@@ -4,6 +4,7 @@
+ #include <mmu.h>
+ #include <machine.h>
+ #include <application.h>
++#include <address_space.h>
+ 
+ __BEGIN_SYS
+ 
+@@ -16,11 +17,16 @@ public:
+     Init_Application() {
+         db<Init>(TRC) << "Init_Application()" << endl;
+ 
+-	// Initialize Application's heap
+-	db<Init>(INF) << "Initializing application's heap" << endl;
+-	Application::_heap = new (&Application::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
++		// Initialize Application's heap
++		db<Init>(INF) << "Initializing application's heap" << endl;
+ 
+-	db<Init>(INF) << "done!" << endl;
++		Segment* seg = new (&Application::_preheap[0]) Segment(HEAP_SIZE);
++		Application::_heap = new (&Application::_preheap[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(seg), seg->size());
++
++		Segment* seg_uncached = new (&Application::_uncached_preheap[0]) Segment(HEAP_SIZE, (Segment::Flags::APP | Segment::Flags::CWT));
++		Application::_uncached_heap = new (&Application::_uncached_preheap[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(seg_uncached), seg_uncached->size());
++
++		db<Init>(INF) << "done!" << endl;
+     }
+ };
+ 
+diff --git a/src/init/init_first.cc b/src/init/init_first.cc
+index 05e59d5..9621909 100644
+--- a/src/init/init_first.cc
++++ b/src/init/init_first.cc
+@@ -1,8 +1,8 @@
+ // EPOS First Thread Initializer
+ 
+ #include <utility/heap.h>
+-#include <system/kmalloc.h>
+ #include <thread.h>
++#include <system.h>
+ 
+ extern "C" { void __epos_app_entry(); }
+ 
+@@ -28,10 +28,10 @@ public:
+         // If EPOS is not a kernel, then adjust the application entry point to __epos_app_entry,
+         // which will directly call main(). In this case, _init will have already been called,
+         // before Init_Application, to construct main()'s global objects.
+-        Thread::_running = new (kmalloc(sizeof(Thread))) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), reinterpret_cast<int (*)()>(__epos_app_entry));
++        Thread::_running = new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), reinterpret_cast<int (*)()>(__epos_app_entry));
+ 
+         // Idle thread creation must succeed main, thus avoiding implicit rescheduling
+-        new (kmalloc(sizeof(Thread))) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);
++        new (SYSTEM) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);
+ 
+         db<Init>(INF) << "done!" << endl;
+ 
+diff --git a/src/init/init_system.cc b/src/init/init_system.cc
+index b58be0c..69affc8 100644
+--- a/src/init/init_system.cc
++++ b/src/init/init_system.cc
+@@ -3,6 +3,7 @@
+ #include <utility/random.h>
+ #include <machine.h>
+ #include <system.h>
++#include <address_space.h>
+ 
+ __BEGIN_SYS
+ 
+@@ -22,7 +23,8 @@ public:
+ 
+         // Initialize System's heap
+         db<Init>(INF) << "Initializing system's heap: " << endl;
+-        System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
++        Segment* seg = new (&System::_preheap[0]) Segment(HEAP_SIZE);
++        System::_heap = new (&System::_preheap[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(seg), seg->size());
+         db<Init>(INF) << "done!" << endl;
+ 
+         // Initialize the machine
+diff --git a/src/system/application_scaffold.cc b/src/system/application_scaffold.cc
+index 99f9234..f6a20ee 100644
+--- a/src/system/application_scaffold.cc
++++ b/src/system/application_scaffold.cc
+@@ -8,6 +8,8 @@ __BEGIN_SYS
+ // Application class attributes
+ char Application::_preheap[];
+ Heap * Application::_heap;
++char Application::_uncached_preheap[];
++Heap* Application::_uncached_heap;
+ 
+ __END_SYS
+ 
