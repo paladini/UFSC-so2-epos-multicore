@@ -1,17 +1,3 @@
-diff --git a/annotations/apresentacao_e4.txt b/annotations/apresentacao_e4.txt
-new file mode 100644
-index 0000000..09424e8
---- /dev/null
-+++ b/annotations/apresentacao_e4.txt
-@@ -0,0 +1,7 @@
-+Quenio fez uma solução gigantesca que tinha uma solução não boa, entretanto vai ganhar boa nota ("MUITOO ALTA") pois desenvolveu tudo do zero e tentou tratar tudo que via de problema.
-+
-+- Corretude de tempo é mais importante do que só ter o resultado correto a qualquer momento em dispositivos de tempo real.
-+
-+Infineon Tricore -> arquitetura ruim que está sendo usada na indústria automobilística. 3 processadores, cada um com um nível de prioridade. É bem confusa e deixa boa parte do sistema para o programador resolver.
-+
-+Standard OSECK / AUTOSAR, que mostra que não podem existir duas threads com prioridades iguais. Se dois alarmes estiverem para acontecer no mesmo tempo, a thread de mais alta prioridade executa primeiro e não importa muito a prioridade da outra thread que estava para acordar. Não existe mágica, uma das threads vai atrasar.
-\ No newline at end of file
 diff --git a/app/malloc_test.cc b/app/malloc_test.cc
 new file mode 100644
 index 0000000..c45115b
@@ -79,6 +65,7 @@ index 0000000..c45115b
 +    
 +    return 0;
 +}
+
 diff --git a/app/segment_test.cc b/app/segment_test.cc
 new file mode 100644
 index 0000000..1840ead
@@ -141,362 +128,7 @@ index 0000000..1840ead
 +
 +    return 0;
 +}
-diff --git a/changes.diff b/changes.diff
-index c39bd2b..7077c9d 100644
---- a/changes.diff
-+++ b/changes.diff
-@@ -1,122 +1,253 @@
--diff --git a/include/utility/handler.h b/include/utility/handler.h
--index 11b0f04..446f8fe 100644
----- a/include/utility/handler.h
--+++ b/include/utility/handler.h
--@@ -7,7 +7,12 @@
-+Index: include/application.h
-+===================================================================
-+--- include/application.h	(revision 3687)
-++++ include/application.h	(working copy)
-+@@ -4,6 +4,7 @@
-+ #define __application_h
-  
-- __BEGIN_UTIL
-+ #include <utility/heap.h>
-++#include <segment.h>
-  
---typedef void (Handler)();
--+class Handler
--+{
--+public:
--+    Handler() {}
--+    virtual void operator()() = 0;
--+};
-+ extern "C"
-+ {
-+@@ -18,17 +19,34 @@
-+     friend class Init_Application;
-+     friend void * ::malloc(size_t);
-+     friend void ::free(void *);
-++    friend void * ::operator new(size_t, const Uncached_Alloc&);
-++    friend void * ::operator new[](size_t, const Uncached_Alloc&);
-+ 
-+ private:
-+     static void init();
-+ 
-+ private:
-+-    static char _preheap[sizeof(Heap)];
-++    // allocate space for both cached and uncached heap
-++    static char _preheap[sizeof(Segment) + sizeof(Heap)];
-++    static Segment * _heap_segment;
-+     static Heap * _heap;
-++
-++    // uncached heap shit
-++    static char _preuncached[sizeof(Segment) + sizeof(Heap)];
-++    static Segment * _uncached_segment;
-++    static Heap * _uncached;
-+ };
-  
-- __END_UTIL
-+ __END_SYS
-  
--diff --git a/src/abstraction/alarm.cc b/src/abstraction/alarm.cc
--index ec8b9ce..86c311e 100644
----- a/src/abstraction/alarm.cc
--+++ b/src/abstraction/alarm.cc
--@@ -1,8 +1,9 @@
-- // EPOS Alarm Abstraction Implementation
-++inline void * operator new(size_t bytes, const Uncached_Alloc&) {
-++    return _SYS::Application::_uncached->alloc(bytes);
-++}
-++
-++inline void * operator new[](size_t bytes, const Uncached_Alloc&) {
-++    return _SYS::Application::_uncached->alloc(bytes);
-++}
-++
-+ #include <utility/malloc.h>
-+ 
-+ #endif
-+Index: include/system/types.h
-+===================================================================
-+--- include/system/types.h	(revision 3687)
-++++ include/system/types.h	(working copy)
-+@@ -12,9 +12,18 @@
-+     void free(void *);
-+ }
-  
---#include <semaphore.h>
-++enum Kernel_Alloc { KERNEL };
-++enum Uncached_Alloc { UNCACHED };
-++
-+ inline void * operator new(size_t s, void * a) { return a; }
-+ inline void * operator new[](size_t s, void * a) { return a; }
-+ 
-++void * operator new(size_t s, const Kernel_Alloc&);
-++void * operator new[](size_t s, const Kernel_Alloc&);
-++
-++void * operator new(size_t s, const Uncached_Alloc&);
-++void * operator new[](size_t s, const Uncached_Alloc&);
-++
-+ // Utilities
-+ __BEGIN_UTIL
-+ class Dummy;
-+Index: include/system.h
-+===================================================================
-+--- include/system.h	(revision 3687)
-++++ include/system.h	(working copy)
-+@@ -11,8 +11,8 @@
-+ {
-+     friend class Init_System;
-+     friend class Init_Application;
-+-    friend void * kmalloc(size_t);
-+-    friend void kfree(void *);
-++    friend void * ::operator new(size_t bytes, const Kernel_Alloc&);
-++    friend void * ::operator new[](size_t bytes, const Kernel_Alloc&);
-+ 
-+ public:
-+     static System_Info<Machine> * const info() { assert(_si); return _si; }
-+@@ -28,4 +28,18 @@
-+ 
-+ __END_SYS
-+ 
-++inline void * operator new(size_t bytes, const Kernel_Alloc&) {
-++    __USING_SYS
-++    void * addr = System::_heap->alloc(bytes);
-++    db<System>(INF) << "System::operator new(bytes=" << bytes << ") => " << addr << endl;
-++    return addr;
-++}
-++
-++inline void * operator new[](size_t bytes, const Kernel_Alloc&) {
-++    __USING_SYS
-++    void * addr = System::_heap->alloc(bytes);
-++    db<System>(INF) << "System::operator new[](bytes=" << bytes << ") => " << addr << endl;
-++    return addr;
-++}
-++
-+ #endif
-+Index: src/abstraction/alarm_init.cc
-+===================================================================
-+--- src/abstraction/alarm_init.cc	(revision 3687)
-++++ src/abstraction/alarm_init.cc	(working copy)
-+@@ -1,7 +1,7 @@
-+ // EPOS Alarm Abstraction Initialization
-+ 
-+-#include <system/kmalloc.h>
-  #include <alarm.h>
-- #include <display.h>
--+#include <thread.h>
--+#include <utility/list.h>
-++#include <system.h>
-  
-  __BEGIN_SYS
-  
--@@ -43,25 +44,36 @@ Alarm::~Alarm()
-+@@ -9,7 +9,7 @@
-+ {
-+     db<Init, Alarm>(TRC) << "Alarm::init()" << endl;
-+ 
-+-    _timer = new (kmalloc(sizeof(Alarm_Timer))) Alarm_Timer(handler);
-++    _timer = new (KERNEL) Alarm_Timer(handler);
-  }
-  
-+ __END_SYS
-+Index: src/abstraction/thread.cc
-+===================================================================
-+--- src/abstraction/thread.cc	(revision 3687)
-++++ src/abstraction/thread.cc	(working copy)
-+@@ -1,8 +1,8 @@
-+ // EPOS Thread Abstraction Implementation
-  
--+class SuspendHandler : public Handler
--+{
--+public:
--+    SuspendHandler(Thread * thread) : _thread(thread) {}
--+    void operator()() { _thread->resume(); }
--+
--+private:
--+    Thread * _thread;
--+};
--+
--+
-- // Class methods
-- void Alarm::delay(const Microsecond & time)
-+-#include <system/kmalloc.h>
-+ #include <machine.h>
-+ #include <thread.h>
-++#include <system.h>
-+ 
-+ // This_Thread class attributes
-+ __BEGIN_UTIL
-+@@ -23,7 +24,9 @@
-  {
--     db<Alarm>(TRC) << "Alarm::delay(time=" << time << ")" << endl;
-- 
---    Tick t = _elapsed + ticks(time);
---
---    while(_elapsed < t);
--+    Thread * self = Thread::self();
--+    SuspendHandler sh(self);
--+    Alarm alarm(time, &sh, 1);
--+    self->suspend();
-+     lock();
-+ 
-+     _thread_count++;
-+
-+-    _stack = reinterpret_cast<char *>(kmalloc(stack_size));
-++    _stack = new (KERNEL) char[stack_size];
-  }
-  
-  
-- void Alarm::handler(const IC::Interrupt_Id & i)
-- {
---    static Tick next_tick;
---    static Handler * next_handler;
--+    typedef Simple_List<Handler> HList;
-+@@ -96,1 +96,1 @@
-+
-+     unlock();
-  
--     lock();
-+-    kfree(_stack);
-++    delete _stack;
-+ }
-  
---    _elapsed++;
--+    ++_elapsed;
-  
--     if(Traits<Alarm>::visible) {
--         Display display;
--@@ -72,23 +84,18 @@ void Alarm::handler(const IC::Interrupt_Id & i)
--         display.position(lin, col);
--     }
-+Index: src/abstraction/thread_init.cc
-+===================================================================
-+--- src/abstraction/thread_init.cc	(revision 3687)
-++++ src/abstraction/thread_init.cc	(working copy)
-+@@ -1,6 +1,5 @@
-+ // EPOS Thread Abstraction Initialization
-  
---    if(next_tick)
---        next_tick--;
---    if(!next_tick) {
---        if(next_handler) {
---            db<Alarm>(TRC) << "Alarm::handler(h=" << reinterpret_cast<void *>(next_handler) << ")" << endl;
---            (*next_handler)();
---        }
---        if(_request.empty())
---            next_handler = 0;
---        else {
---            Queue::Element * e = _request.remove();
---            Alarm * alarm = e->object();
---            next_tick = alarm->_ticks;
---            next_handler = alarm->_handler;
---            if(alarm->_times != -1)
---                alarm->_times--;
---            if(alarm->_times) {
--+    HList handler;
-+-#include <system/kmalloc.h>
-+ #include <system.h>
-+ #include <thread.h>
-+ #include <alarm.h>
-+@@ -16,7 +15,7 @@
-+     // MAIN is created first and dispatch won't replace it nor by itself
-+     // neither by IDLE (which has a lower priority)
-+     if(preemptive)
-+-        _timer = new (kmalloc(sizeof(Scheduler_Timer))) Scheduler_Timer(QUANTUM, time_slicer);
-++        _timer = new (KERNEL) Scheduler_Timer(QUANTUM, time_slicer);
-+ }
-+ 
-+ __END_SYS
-+Index: src/init/init_application.cc
-+===================================================================
-+--- src/init/init_application.cc	(revision 3687)
-++++ src/init/init_application.cc	(working copy)
-+@@ -4,6 +4,7 @@
-+ #include <mmu.h>
-+ #include <machine.h>
-+ #include <application.h>
-++#include <address_space.h>
-+ 
-+ __BEGIN_SYS
-+ 
-+@@ -18,8 +19,16 @@
-+ 
-+ 	// Initialize Application's heap
-+ 	db<Init>(INF) << "Initializing application's heap" << endl;
-+-	Application::_heap = new (&Application::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
-+ 
-++    // cached
-++    Application::_heap_segment = new (&Application::_preheap[0]) Segment(HEAP_SIZE);
-++	Application::_heap = new (&Application::_preheap[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(Application::_heap_segment), Application::_heap_segment->size());
- +
--+    if(!_request.empty()) {
--+        _request.head()->promote();
--+        while(_request.head()->rank() <= 0) {
--+            Queue::Element* e = _request.remove();
--+            Alarm* alarm = e->object();
-++    // uncached
-++    typedef Segment::Flags Flags;
-++    Application::_uncached_segment = new (&Application::_preuncached[0]) Segment(HEAP_SIZE, Flags::APP | Flags::CD);
-++	Application::_uncached = new (&Application::_preuncached[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(Application::_uncached_segment), Application::_uncached_segment->size());
- +
--+            handler.insert(new (kmalloc(sizeof(HList::Element))) HList::Element(alarm->_handler));
--+            
--+            alarm->_times--;
--+            if(alarm->_times > 0) {
--                 e->rank(alarm->_ticks);
--                 _request.insert(e);
--             }
--@@ -96,6 +103,11 @@ void Alarm::handler(const IC::Interrupt_Id & i)
-+ 	db<Init>(INF) << "done!" << endl;
-      }
-- 
--     unlock();
-+ };
-+Index: src/init/init_first.cc
-+===================================================================
-+--- src/init/init_first.cc	(revision 3687)
-++++ src/init/init_first.cc	(working copy)
-+@@ -1,7 +1,7 @@
-+ // EPOS First Thread Initializer
-+ 
-+ #include <utility/heap.h>
-+-#include <system/kmalloc.h>
-++#include <system.h>
-+ #include <thread.h>
-+ 
-+ extern "C" { void __epos_app_entry(); }
-+@@ -28,8 +28,11 @@
-+         // If EPOS is not a kernel, then adjust the application entry point to __epos_app_entry,
-+         // which will directly call main(). In this case, _init will have already been called,
-+         // before Init_Application, to construct main()'s global objects.
-+-        Thread::_running = new (kmalloc(sizeof(Thread))) Thread(Thread::Configuration(Thread::RUNNING, Thread::NORMAL), reinterpret_cast<int (*)()>(__epos_app_entry));
-++        Thread::_running = new (KERNEL) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), reinterpret_cast<int (*)()>(__epos_app_entry));
-+ 
-++        // Idle thread creation must succeed main, thus avoiding implicit rescheduling
-++        new (KERNEL) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);
- +
--+    for (HList::Iterator it = handler.begin(); it != handler.end(); ++it) {
--+        Handler * h = it->object();
--+        (*h)();
--+    }
-- }
-+         db<Init>(INF) << "done!" << endl;
-+ 
-+         db<Init>(INF) << "INIT ends here!" << endl;
-+Index: src/system/application_scaffold.cc
-+===================================================================
-+--- src/system/application_scaffold.cc	(revision 3687)
-++++ src/system/application_scaffold.cc	(working copy)
-+@@ -7,7 +7,11 @@
-+ 
-+ // Application class attributes
-+ char Application::_preheap[];
-++Segment * Application::_heap_segment;
-+ Heap * Application::_heap;
-++char Application::_preuncached[];
-++Segment * Application::_uncached_segment;
-++Heap * Application::_uncached;
-+ 
-+ __END_SYS
-+ 
+
 diff --git a/include/application.h b/include/application.h
 index b7457b6..5c155cc 100644
 --- a/include/application.h
@@ -526,7 +158,6 @@ index b7457b6..5c155cc 100644
 +    static Segment * _heap_segment;
      static Heap * _heap;
 +
-+    // uncached heap shit
 +    static char _preuncached[sizeof(Segment) + sizeof(Heap)];
 +    static Segment * _uncached_segment;
 +    static Heap * _uncached;
@@ -545,6 +176,7 @@ index b7457b6..5c155cc 100644
  #include <utility/malloc.h>
  
  #endif
+
 diff --git a/include/system.h b/include/system.h
 index 1b80e10..fb4990c 100644
 --- a/include/system.h
@@ -579,6 +211,7 @@ index 1b80e10..fb4990c 100644
 +}
 +
  #endif
+
 diff --git a/include/system/kmalloc.h b/include/system/kmalloc.h
 deleted file mode 100644
 index 4f8e7a9..0000000
@@ -605,6 +238,7 @@ index 4f8e7a9..0000000
 -__END_SYS
 -
 -#endif
+
 diff --git a/include/system/types.h b/include/system/types.h
 index f166866..5843e19 100644
 --- a/include/system/types.h
@@ -667,20 +301,7 @@ index a5f69a8..3499caf 100644
  __END_UTIL
  
  #endif
-diff --git a/src/abstraction/alarm.cc b/src/abstraction/alarm.cc
-index 8e18375..810498d 100644
---- a/src/abstraction/alarm.cc
-+++ b/src/abstraction/alarm.cc
-@@ -3,6 +3,9 @@
- #include <semaphore.h>
- #include <alarm.h>
- #include <display.h>
-+#include <thread.h>
-+#include <system.h>
-+#include <utility/list.h>
- 
- __BEGIN_SYS
- 
+
 diff --git a/src/abstraction/alarm_init.cc b/src/abstraction/alarm_init.cc
 index e1c738b..b35c6fb 100644
 --- a/src/abstraction/alarm_init.cc
@@ -755,6 +376,7 @@ index 8a0fb90..46f88cf 100644
  }
  
  __END_SYS
+
 diff --git a/src/init/init_application.cc b/src/init/init_application.cc
 index 864c466..af6e18c 100644
 --- a/src/init/init_application.cc
@@ -784,6 +406,7 @@ index 864c466..af6e18c 100644
  
  	db<Init>(INF) << "done!" << endl;
      }
+     
 diff --git a/src/init/init_first.cc b/src/init/init_first.cc
 index 05e59d5..7f1743d 100644
 --- a/src/init/init_first.cc
