@@ -1,8 +1,10 @@
 // EPOS System Initializer
 
+#include <address_space.h>
 #include <utility/random.h>
 #include <machine.h>
 #include <system.h>
+#include <uncached.h>
 
 __BEGIN_SYS
 
@@ -23,6 +25,13 @@ public:
         // Initialize System's heap
         db<Init>(INF) << "Initializing system's heap: " << endl;
         System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
+        db<Init>(INF) << "done!" << endl;
+
+        // Initialize uncached heap
+        db<Init>(INF) << "Initializing uncached heap: " << endl;
+        typedef Segment::Flags Flags;
+        Uncached_Heap::_segment = new (KERNEL) Segment(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE, Flags::APP | Flags::CD);
+        Uncached_Heap::_heap = new (KERNEL) Heap(Address_Space(MMU::current()).attach(Uncached_Heap::_segment), Uncached_Heap::_segment->size());
         db<Init>(INF) << "done!" << endl;
 
         // Initialize the machine
