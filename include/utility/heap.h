@@ -75,22 +75,6 @@ private:
     void out_of_memory();
 };
 
-class UncachedHeap: public Heap, private Grouping_List<volatile char> {
-public:
-    using Grouping_List<volatile char>::empty;
-    using Grouping_List<volatile char>::size;
-
-    UncachedHeap() {
-        db<Init, Heaps>(TRC) << "UncachedHeap() => " << this << endl;
-    }
-
-    UncachedHeap(void * addr, unsigned int bytes) {
-        db<Init, Heaps>(TRC) << "UncachedHeap(addr=" << addr << ",bytes=" << bytes << ") => " << this << endl;
-
-        free(addr, bytes);
-    }
-};
-
 __END_UTIL
 
 #endif
