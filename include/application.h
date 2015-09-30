@@ -23,8 +23,9 @@ private:
     static void init();
 
 private:
-    static char _preheap[sizeof(Heap)];
+    static char _preheap[sizeof(Heap) + sizeof(UncachedHeap)];
     static Heap * _heap;
+    static UncachedHeap * _uncachedHeap;
 };
 
 __END_SYS

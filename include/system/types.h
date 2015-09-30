@@ -12,8 +12,13 @@ extern "C"
     void free(void *);
 }
 
+enum Kernel_Alloc { KERNEL };
+
 inline void * operator new(size_t s, void * a) { return a; }
 inline void * operator new[](size_t s, void * a) { return a; }
+
+void * operator new(size_t s, const Kernel_Alloc&);
+void * operator new[](size_t s, const Kernel_Alloc&);
 
 // Utilities
 __BEGIN_UTIL

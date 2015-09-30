@@ -1,8 +1,8 @@
 // EPOS Thread Abstraction Implementation
 
-#include <system/kmalloc.h>
 #include <machine.h>
 #include <thread.h>
+#include <system.h>
 
 // This_Thread class attributes
 __BEGIN_UTIL
@@ -26,7 +26,7 @@ void Thread::constructor_prolog(unsigned int stack_size)
 
     _thread_count++;
 
-    _stack = reinterpret_cast<char *>(kmalloc(stack_size));
+    _stack = new (KERNEL) char[stack_size];
 }
 
 
@@ -94,7 +94,7 @@ Thread::~Thread()
 
     unlock();
 
-    kfree(_stack);
+    delete _stack;
 }
 
 

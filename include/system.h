@@ -11,8 +11,8 @@ class System
 {
     friend class Init_System;
     friend class Init_Application;
-    friend void * kmalloc(size_t);
-    friend void kfree(void *);
+    friend void * ::operator new(size_t bytes, const Kernel_Alloc&);
+    friend void * ::operator new[](size_t bytes, const Kernel_Alloc&);
 
 public:
     static System_Info<Machine> * const info() { assert(_si); return _si; }
@@ -27,5 +27,19 @@ private:
 };
 
 __END_SYS
+
+inline void * operator new(size_t bytes, const Kernel_Alloc&) {
+    __USING_SYS
+    void * addr = System::_heap->alloc(bytes);
+    db<System>(INF) << "System::operator new(bytes=" << bytes << ") => " << addr << endl;
+    return addr;
+}
+
+inline void * operator new[](size_t bytes, const Kernel_Alloc&) {
+    __USING_SYS
+    void * addr = System::_heap->alloc(bytes);
+    db<System>(INF) << "System::operator new[](bytes=" << bytes << ") => " << addr << endl;
+    return addr;
+}
 
 #endif

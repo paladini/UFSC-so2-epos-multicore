@@ -3,6 +3,9 @@
 #include <semaphore.h>
 #include <alarm.h>
 #include <display.h>
+#include <thread.h>
+#include <system.h>
+#include <utility/list.h>
 
 __BEGIN_SYS
 

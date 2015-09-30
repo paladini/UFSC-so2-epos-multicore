@@ -1,0 +1,7 @@
+Quenio fez uma solução gigantesca que tinha uma solução não boa, entretanto vai ganhar boa nota ("MUITOO ALTA") pois desenvolveu tudo do zero e tentou tratar tudo que via de problema.
+
+- Corretude de tempo é mais importante do que só ter o resultado correto a qualquer momento em dispositivos de tempo real.
+
+Infineon Tricore -> arquitetura ruim que está sendo usada na indústria automobilística. 3 processadores, cada um com um nível de prioridade. É bem confusa e deixa boa parte do sistema para o programador resolver.
+
+Standard OSECK / AUTOSAR, que mostra que não podem existir duas threads com prioridades iguais. Se dois alarmes estiverem para acontecer no mesmo tempo, a thread de mais alta prioridade executa primeiro e não importa muito a prioridade da outra thread que estava para acordar. Não existe mágica, uma das threads vai atrasar.
