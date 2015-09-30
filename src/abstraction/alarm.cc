@@ -1,9 +1,8 @@
 // EPOS Alarm Abstraction Implementation
 
+#include <semaphore.h>
 #include <alarm.h>
 #include <display.h>
-#include <thread.h>
-#include <utility/list.h>
 
 __BEGIN_SYS
 
@@ -44,36 +43,23 @@ Alarm::~Alarm()
 }
 
 
-class SuspendHandler : public Handler
-{
-public:
-    SuspendHandler(Thread * thread) : _thread(thread) {}
-    void operator()() { _thread->resume(); }
-
-private:
-    Thread * _thread;
-};
-
-
 // Class methods
 void Alarm::delay(const Microsecond & time)
 {
     db<Alarm>(TRC) << "Alarm::delay(time=" << time << ")" << endl;
 
-    Thread * self = Thread::self();
-    SuspendHandler sh(self);
-    Alarm alarm(time, &sh, 1);
-    self->suspend();
+    Semaphore semaphore(0);
+    Semaphore_Handler handler(&semaphore);
+    Alarm alarm(time, &handler, 1); // if time < tick trigger v()
+    semaphore.p();
 }
 
 
 void Alarm::handler(const IC::Interrupt_Id & i)
 {
-    typedef Simple_List<Handler> HList;
-
     lock();
 
-    ++_elapsed;
+    _elapsed++;
 
     if(Traits<Alarm>::visible) {
         Display display;
@@ -84,18 +70,17 @@ void Alarm::handler(const IC::Interrupt_Id & i)
         display.position(lin, col);
     }
 
-    HList handler;
+    Alarm * alarm = 0;
 
     if(!_request.empty()) {
-        _request.head()->promote();
-        while(_request.head()->rank() <= 0) {
-            Queue::Element* e = _request.remove();
-            Alarm* alarm = e->object();
-
-            handler.insert(new (kmalloc(sizeof(HList::Element))) HList::Element(alarm->_handler));
-            
-            alarm->_times--;
-            if(alarm->_times > 0) {
+        // Replacing the following "if" by a "while" loop is tempting, but recovering the lock and dispatching the handler is
+        // troublesome if the Alarm gets destroyed in between, like is the case for the idle thread returning to shutdown the machine
+        if(_request.head()->promote() <= 0) { // rank can be negative whenever multiple handlers get created for the same time tick
+            Queue::Element * e = _request.remove();
+            alarm = e->object();
+            if(alarm->_times != INFINITE)
+                alarm->_times--;
+            if(alarm->_times) {
                 e->rank(alarm->_ticks);
                 _request.insert(e);
             }
@@ -104,9 +89,9 @@ void Alarm::handler(const IC::Interrupt_Id & i)
 
     unlock();
 
-    for (HList::Iterator it = handler.begin(); it != handler.end(); ++it) {
-        Handler * h = it->object();
-        (*h)();
+    if(alarm) {
+        db<Alarm>(TRC) << "Alarm::handler(this=" << alarm << ",e=" << _elapsed << ",h=" << reinterpret_cast<void*>(alarm->handler) << ")" << endl;
+        (*alarm->_handler)();
     }
 }
 

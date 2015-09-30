@@ -19,8 +19,11 @@ int main()
     cout << "I'm the first thread of the first task created in the system." << endl;
     cout << "I'll now create two alarms and put myself in a delay ..." << endl;
 
-    Alarm alarm_a(2000000, &func_a, iterations);
-    Alarm alarm_b(1000000, &func_b, iterations);
+    Function_Handler handler_a(&func_a);
+    Alarm alarm_a(2000000, &handler_a, iterations);
+
+    Function_Handler handler_b(&func_b);
+    Alarm alarm_b(1000000, &handler_b, iterations);
 
     // Note that in case of idle-waiting, this thread will go into suspend
     // and the alarm handlers above will trigger the functions in the context

@@ -30,6 +30,9 @@ public:
         // before Init_Application, to construct main()'s global objects.
         Thread::_running = new (kmalloc(sizeof(Thread))) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), reinterpret_cast<int (*)()>(__epos_app_entry));
 
+        // Idle thread creation must succeed main, thus avoiding implicit rescheduling
+        new (kmalloc(sizeof(Thread))) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);
+
         db<Init>(INF) << "done!" << endl;
 
         db<Init>(INF) << "INIT ends here!" << endl;

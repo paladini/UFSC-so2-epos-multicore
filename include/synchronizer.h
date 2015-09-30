@@ -1,5 +1,4 @@
 // EPOS Synchronizer Abstractions Common Package
-// Supostamente uma queue diferente pra mutex e pra semaphore? 
 
 #ifndef __synchronizer_h
 #define __synchronizer_h
@@ -11,6 +10,9 @@ __BEGIN_SYS
 
 class Synchronizer_Common
 {
+protected:
+    typedef Thread::Queue Queue;
+
 protected:
     Synchronizer_Common() {}
     ~Synchronizer_Common() { begin_atomic(); wakeup_all(); }
@@ -24,14 +26,15 @@ protected:
     void begin_atomic() { Thread::lock(); }
     void end_atomic() { Thread::unlock(); }
 
-    void sleep() { Thread::sleep(_queue); }
-    void wakeup() { Thread::wakeup(_queue); }
-    void wakeup_all() { Thread::wakeup_all(_queue); }
+    void sleep() { Thread::sleep(&_queue); }
+    void wakeup() { Thread::wakeup(&_queue); }
+    void wakeup_all() { Thread::wakeup_all(&_queue); }
 
 private:
-    Thread::Queue _queue;
+    Queue _queue;
 };
 
 __END_SYS
 
 #endif
+

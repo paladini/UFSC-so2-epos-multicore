@@ -1,5 +1,4 @@
 // EPOS Semaphore Abstraction Implementation
-// Os métodos precisam ser atômicos (begin_atomic(), end_atomic())
 
 #include <semaphore.h>
 
@@ -22,11 +21,10 @@ void Semaphore::p()
     db<Synchronizer>(TRC) << "Semaphore::p(this=" << this << ",value=" << _value << ")" << endl;
 
     begin_atomic();
-    if (fdec(_value) < 1) {
-        sleep();
-    } else {
+    if(fdec(_value) < 1)
+        sleep(); // implicit end_atomic()
+    else
         end_atomic();
-    }
 }
 
 
@@ -35,11 +33,10 @@ void Semaphore::v()
     db<Synchronizer>(TRC) << "Semaphore::v(this=" << this << ",value=" << _value << ")" << endl;
 
     begin_atomic();
-    if (finc(_value) < 0) {
-        wakeup();
-    } else {
+    if(finc(_value) < 0)
+        wakeup();  // implicit end_atomic()
+    else
         end_atomic();
-    }
 }
 
 __END_SYS

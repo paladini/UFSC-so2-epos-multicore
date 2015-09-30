@@ -21,6 +21,7 @@ class Dummy;
 class Bitmaps;
 class CRC;
 class ELF;
+class Handler;
 class Hashes;
 class Heaps;
 class Debug;
@@ -90,11 +91,11 @@ class Delay;
 typedef unsigned int Type_Id;
 enum
 {
-    CPU_ID = 0,
+    CPU_ID = 100,
     TSC_ID,
     MMU_ID,
 
-    MACHINE_ID = 10,
+    MACHINE_ID,
     PCI_ID,
     IC_ID,
     TIMER_ID,
@@ -103,7 +104,7 @@ enum
     UART_ID,
     DISPLAY_ID,
 
-    THREAD_ID = 20,
+    THREAD_ID = 0,
 
     ADDRESS_SPACE_ID,
     SEGMENT_ID,
@@ -116,10 +117,11 @@ enum
     ALARM_ID,
     CHRONOMETER_ID,
 
-    UTILITY_ID = 50,
+    UTILITY_ID,
 
     UNKNOWN_TYPE_ID,
-    LAST_TYPE_ID = UNKNOWN_TYPE_ID - 1
+
+    LAST_TYPE_ID = UNKNOWN_TYPE_ID
 };
 
 // Type IDs for system components
@@ -150,7 +152,6 @@ template<> struct Type<Clock> { static const Type_Id ID = CLOCK_ID; };
 template<> struct Type<Chronometer> { static const Type_Id ID = CHRONOMETER_ID; };
 template<> struct Type<Alarm> { static const Type_Id ID = ALARM_ID; };
 template<> struct Type<Delay> { static const Type_Id ID = ALARM_ID; };
-
 
 template<> struct Type<Utility> { static const Type_Id ID = UTILITY_ID; };
 
