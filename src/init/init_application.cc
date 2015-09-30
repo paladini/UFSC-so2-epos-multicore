@@ -5,6 +5,7 @@
 #include <machine.h>
 #include <application.h>
 #include <address_space.h>
+#include <system.h>
 
 __BEGIN_SYS
 
@@ -20,16 +21,26 @@ public:
 	// Initialize Application's heap
 	db<Init>(INF) << "Initializing application's heap" << endl;
 
+    typedef Segment::Flags Flags;
+    Address_Space self(MMU::current());
+
     // cached
-    Application::_heap_segment = new (&Application::_preheap[0]) Segment(HEAP_SIZE);
-	Application::_heap = new (&Application::_preheap[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(Application::_heap_segment), Application::_heap_segment->size());
+    {
+        Application::_heap_segment = new (&Application::_preheap[0]) Segment(HEAP_SIZE, Flags::APP);
+        CPU::Log_Addr * addr = self.attach(Application::_heap_segment);
+
+        Application::_heap = new (&Application::_preheap[sizeof(Segment)]) Heap(addr, Application::_heap_segment->size());
+    }
 
     // uncached
-    typedef Segment::Flags Flags;
-    Application::_uncached_segment = new (&Application::_preuncached[0]) Segment(HEAP_SIZE, Flags::APP | Flags::CD);
-	Application::_uncached = new (&Application::_preuncached[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(Application::_uncached_segment), Application::_uncached_segment->size());
+    {
+        Application::_uncached_segment = new (&Application::_preuncached[0]) Segment(HEAP_SIZE, Flags::APP | Flags::CD);
+        CPU::Log_Addr * addr = self.attach(Application::_heap_segment);
 
-	db<Init>(INF) << "done!" << endl;
+        Application::_uncached = new (&Application::_preuncached[sizeof(Segment)]) Heap(addr, Application::_uncached_segment->size());
+    }
+
+    db<Init>(INF) << "done!" << endl;
     }
 };
 
