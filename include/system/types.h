@@ -13,12 +13,16 @@ extern "C"
 }
 
 enum Kernel_Alloc { KERNEL };
+enum Uncached_Alloc { UNCACHED };
 
 inline void * operator new(size_t s, void * a) { return a; }
 inline void * operator new[](size_t s, void * a) { return a; }
 
 void * operator new(size_t s, const Kernel_Alloc&);
 void * operator new[](size_t s, const Kernel_Alloc&);
+
+void * operator new(size_t s, const Uncached_Alloc&);
+void * operator new[](size_t s, const Uncached_Alloc&);
 
 // Utilities
 __BEGIN_UTIL
