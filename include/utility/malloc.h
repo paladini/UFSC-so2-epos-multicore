@@ -22,7 +22,17 @@ extern "C"
 
     inline void free(void * ptr) {
         __USING_SYS;
-        Application::_heap->free(ptr);
+        Segment * segment = Application::_heap_segment;
+        if (ptr >= segment->phy_address() && ptr < (segment->phy_address() + segment->size())) {
+            Application::_heap->free(ptr);
+            return;
+        }
+
+        segment = Application::_uncached_segment;
+        if (ptr >= segment->phy_address() && ptr < (segment->phy_address() + segment->size())) {
+            Application::_uncached->free(ptr);
+            return;
+        }
     }
 }
 
