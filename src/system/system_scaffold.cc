@@ -6,6 +6,7 @@
 #include <machine.h>
 #include <system.h>
 #include <thread.h>
+#include <uncached.h>
 
 __BEGIN_SYS
 
@@ -31,6 +32,8 @@ OStream kerr;
 System_Info<Machine> * System::_si = reinterpret_cast<System_Info<Machine> *>(Memory_Map<Machine>::SYS_INFO);
 char System::_preheap[];
 Heap * System::_heap;
+Segment * Uncached_Heap::_segment;
+Heap * Uncached_Heap::_heap;
 
 __END_SYS
 
