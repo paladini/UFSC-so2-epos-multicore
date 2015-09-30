@@ -3,7 +3,6 @@
 #include <utility/ostream.h>
 #include <utility/string.h>
 #include <utility/malloc.h>
-#include <uncached.h>
 
 using namespace EPOS;
 

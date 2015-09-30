@@ -7,8 +7,11 @@ __BEGIN_SYS
 
 // Application class attributes
 char Application::_preheap[];
+Segment * Application::_heap_segment;
 Heap * Application::_heap;
-UncachedHeap * Application::_uncachedHeap;
+char Application::_preuncached[];
+Segment * Application::_uncached_segment;
+Heap * Application::_uncached;
 
 __END_SYS
 

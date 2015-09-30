@@ -4,6 +4,7 @@
 #include <mmu.h>
 #include <machine.h>
 #include <application.h>
+#include <address_space.h>
 
 __BEGIN_SYS
 
@@ -18,8 +19,15 @@ public:
 
 	// Initialize Application's heap
 	db<Init>(INF) << "Initializing application's heap" << endl;
-	Application::_heap = new (&Application::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
-	Application::_uncachedHeap = new (&Application::_preheap[sizeof(Heap)]) UncachedHeap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
+
+    // cached
+    Application::_heap_segment = new (&Application::_preheap[0]) Segment(HEAP_SIZE);
+	Application::_heap = new (&Application::_preheap[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(Application::_heap_segment), Application::_heap_segment->size());
+
+    // uncached
+    typedef Segment::Flags Flags;
+    Application::_uncached_segment = new (&Application::_preuncached[0]) Segment(HEAP_SIZE, Flags::APP | Flags::CD);
+	Application::_uncached = new (&Application::_preuncached[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(Application::_uncached_segment), Application::_uncached_segment->size());
 
 	db<Init>(INF) << "done!" << endl;
     }
