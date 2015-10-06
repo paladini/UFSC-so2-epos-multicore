@@ -7,6 +7,7 @@
 #include <utility/handler.h>
 #include <cpu.h>
 #include <machine.h>
+#include "scheduler.h"
 
 extern "C" { void __exit(); }
 
@@ -19,9 +20,10 @@ class Thread
     friend class Synchronizer_Common;
     friend class Alarm;
     friend class IA32;
+    friend class Scheduler<Thread>;
 
 protected:
-    static const bool preemptive = Traits<Thread>::preemptive;
+    // static const bool preemptive = Traits<Thread>::preemptive;
     static const bool reboot = Traits<System>::reboot;
 
     static const unsigned int QUANTUM = Traits<Thread>::QUANTUM;

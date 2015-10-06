@@ -39,7 +39,8 @@ void Thread::constructor_epilog(const Log_Addr & entry, unsigned int stack_size)
                     << ",s=" << stack_size
                     << "},context={b=" << _context
                     << "," << *_context << "}) => " << this << endl;
-
+    
+    // Scheduler::insert(this);
     switch(_state) {
         case RUNNING: break;
         case READY: _ready.insert(&_link); break;
@@ -48,7 +49,7 @@ void Thread::constructor_epilog(const Log_Addr & entry, unsigned int stack_size)
         case FINISHING: break;
     }
 
-    if(preemptive && (_state == READY) && (_link.rank() != IDLE))
+    if(Scheduler<Thread>::preemptive && (_state == READY) && (_link.rank() != IDLE))
         reschedule();
     else
         unlock();
@@ -69,6 +70,7 @@ Thread::~Thread()
     // The running thread cannot delete itself!
     assert(_state != RUNNING);
 
+    // Scheduler::remove(this);
     switch(_state) {
     case RUNNING:  // For switch completion only: the running thread would have deleted itself! Stack wouldn't have been released!
         exit(-1);
@@ -129,8 +131,10 @@ void Thread::pass()
     Thread * prev = _running;
     prev->_state = READY;
     _ready.insert(&prev->_link);
+    // Scheduler::insert(&prev);
 
     _ready.remove(this);
+    // Scheduler::remove(this);
     _state = RUNNING;
     _running = this;
 
@@ -147,12 +151,15 @@ void Thread::suspend()
     db<Thread>(TRC) << "Thread::suspend(this=" << this << ")" << endl;
 
     if(_running != this)
+        // Scheduler::remove(this);
         _ready.remove(this);
 
     _state = SUSPENDED;
     _suspended.insert(&_link);
+    // Scheduler::suspend(this)
 
     if(_running == this) {
+        // _running = Scheduler::remove()->object();
         _running = _ready.remove()->object();
         _running->_state = RUNNING;
 
@@ -261,7 +268,7 @@ void Thread::wakeup(Queue * q)
 
     unlock();
 
-    if(preemptive)
+    if(Scheduler<Thread>::preemptive)
         reschedule();
 }
 
@@ -282,7 +289,7 @@ void Thread::wakeup_all(Queue * q)
 
     unlock();
 
-    if(preemptive)
+    if(Scheduler<Thread>::preemptive)
         reschedule();
 }
 
