@@ -18,6 +18,7 @@ Scheduler_Timer * Thread::_timer;
 Thread* volatile Thread::_running;
 Thread::Queue Thread::_ready;
 Thread::Queue Thread::_suspended;
+Scheduler<Thread> _scheduler;
 
 // Methods
 void Thread::constructor_prolog(unsigned int stack_size)
@@ -40,14 +41,14 @@ void Thread::constructor_epilog(const Log_Addr & entry, unsigned int stack_size)
                     << "},context={b=" << _context
                     << "," << *_context << "}) => " << this << endl;
     
-    // Scheduler::insert(this);
-    switch(_state) {
-        case RUNNING: break;
-        case READY: _ready.insert(&_link); break;
-        case SUSPENDED: _suspended.insert(&_link); break;
-        case WAITING: break;
-        case FINISHING: break;
-    }
+    Scheduler::insert(this);
+    // switch(_state) {
+    //     case RUNNING: break;
+    //     case READY: _ready.insert(&_link); break;
+    //     case SUSPENDED: _suspended.insert(&_link); break;
+    //     case WAITING: break;
+    //     case FINISHING: break;
+    // }
 
     if(Scheduler<Thread>::preemptive && (_state == READY) && (_link.rank() != IDLE))
         reschedule();
@@ -70,17 +71,17 @@ Thread::~Thread()
     // The running thread cannot delete itself!
     assert(_state != RUNNING);
 
-    // Scheduler::remove(this);
+    Scheduler::remove(this);
     switch(_state) {
     case RUNNING:  // For switch completion only: the running thread would have deleted itself! Stack wouldn't have been released!
         exit(-1);
         break;
     case READY:
-        _ready.remove(this);
+        // _ready.remove(this);
         _thread_count--;
         break;
     case SUSPENDED:
-        _suspended.remove(this);
+        // _suspended.remove(this);
         _thread_count--;
         break;
     case WAITING:
@@ -130,11 +131,11 @@ void Thread::pass()
 
     Thread * prev = _running;
     prev->_state = READY;
-    _ready.insert(&prev->_link);
-    // Scheduler::insert(&prev);
+    // _ready.insert(&prev->_link);
+    Scheduler::insert(&prev);
 
-    _ready.remove(this);
-    // Scheduler::remove(this);
+    // _ready.remove(this);
+    Scheduler::remove(this);
     _state = RUNNING;
     _running = this;
 
@@ -151,16 +152,16 @@ void Thread::suspend()
     db<Thread>(TRC) << "Thread::suspend(this=" << this << ")" << endl;
 
     if(_running != this)
-        // Scheduler::remove(this);
-        _ready.remove(this);
+        Scheduler::remove(this);
+        // _ready.remove(this);
 
     _state = SUSPENDED;
-    _suspended.insert(&_link);
-    // Scheduler::suspend(this)
+    // _suspended.insert(&_link);
+    Scheduler::suspend(this);
 
     if(_running == this) {
-        // _running = Scheduler::remove()->object();
-        _running = _ready.remove()->object();
+        _running = Scheduler::remove()->object();
+        // _running = _ready.remove()->object();
         _running->_state = RUNNING;
 
         dispatch(this, _running);
@@ -176,9 +177,12 @@ void Thread::resume()
 
     db<Thread>(TRC) << "Thread::resume(this=" << this << ")" << endl;
 
-   _suspended.remove(this);
-   _state = READY;
-   _ready.insert(&_link);
+   // _suspended.remove(this);
+   // _state = READY;
+   // _ready.insert(&_link);
+
+    _state = READY;
+    Scheduler::resume(this);
 
    unlock();
 }
@@ -193,10 +197,13 @@ void Thread::yield()
 
     Thread * prev = _running;
     prev->_state = READY;
-    _ready.insert(&prev->_link);
+    // _ready.insert(&prev->_link);
+    Scheduler::insert(&prev);
 
-    _running = _ready.remove()->object();
+    // _running = _ready.remove()->object();
+    _running = Scheduler::remove()->object();
     _running->_state = RUNNING;
+
 
     dispatch(prev, _running);
 
@@ -223,7 +230,8 @@ void Thread::exit(int status)
 
     lock();
 
-    _running = _ready.remove()->object();
+    // _running = _ready.remove()->object();
+    _running = Scheduler::remove()->object();
     _running->_state = RUNNING;
 
     dispatch(prev, _running);
@@ -243,7 +251,8 @@ void Thread::sleep(Queue * q)
     prev->_waiting = q;
     q->insert(&prev->_link);
 
-    _running = _ready.remove()->object();
+    // _running = _ready.remove()->object();
+    _running = Scheduler::remove()->object();
     _running->_state = RUNNING;
 
     dispatch(prev, _running);
@@ -263,7 +272,8 @@ void Thread::wakeup(Queue * q)
         Thread * t = q->remove()->object();
         t->_state = READY;
         t->_waiting = 0;
-        _ready.insert(&t->_link);
+        // _ready.insert(&t->_link);
+        Scheduler::insert(&t);
     }
 
     unlock();
@@ -284,7 +294,8 @@ void Thread::wakeup_all(Queue * q)
         Thread * t = q->remove()->object();
         t->_state = READY;
         t->_waiting = 0;
-        _ready.insert(&t->_link);
+        // _ready.insert(&t->_link);
+        Scheduler::insert(&t);
     }
 
     unlock();

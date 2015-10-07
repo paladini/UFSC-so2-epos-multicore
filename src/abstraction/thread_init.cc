@@ -3,6 +3,7 @@
 #include <system.h>
 #include <thread.h>
 #include <alarm.h>
+#include "scheduler.h"
 
 __BEGIN_SYS
 
@@ -14,7 +15,7 @@ void Thread::init()
     // Letting reschedule() happen during thread creation is harmless, since
     // MAIN is created first and dispatch won't replace it nor by itself
     // neither by IDLE (which has a lower priority)
-    if(preemptive)
+    if(Scheduler<Thread>::preemptive)
         _timer = new (KERNEL) Scheduler_Timer(QUANTUM, time_slicer);
 }
 

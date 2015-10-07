@@ -120,6 +120,7 @@ protected:
 
     static volatile unsigned int _thread_count;
     static Scheduler_Timer * _timer;
+    static Scheduler<Thread> _scheduler;
 
 private:
     static Thread * volatile _running;
