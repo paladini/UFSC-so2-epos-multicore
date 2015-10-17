@@ -4,6 +4,7 @@
 #include <machine.h>
 #include <system.h>
 #include <address_space.h>
+#include <segment.h>
 
 __BEGIN_SYS
 
@@ -23,8 +24,11 @@ public:
 
         // Initialize System's heap
         db<Init>(INF) << "Initializing system's heap: " << endl;
-        Segment* seg = new (&System::_preheap[0]) Segment(HEAP_SIZE);
-        System::_heap = new (&System::_preheap[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(seg), seg->size());
+        if(Traits<System>::multiheap) {
+            System::_heap_segment = new (&System::_preheap[0]) Segment(HEAP_SIZE, Segment::Flags::SYS);
+            System::_heap = new (&System::_preheap[sizeof(Segment)]) Heap(Address_Space(MMU::current()).attach(System::_heap_segment, Memory_Map<Machine>::SYS_HEAP), System::_heap_segment->size());
+        } else
+            System::_heap = new (&System::_preheap[0]) Heap(MMU::alloc(MMU::pages(HEAP_SIZE)), HEAP_SIZE);
         db<Init>(INF) << "done!" << endl;
 
         // Initialize the machine

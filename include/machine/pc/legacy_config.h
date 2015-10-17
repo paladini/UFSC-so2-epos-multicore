@@ -19,6 +19,7 @@
 #define __UART_H        __HEADER_MACH(uart)
 #define __DISPLAY_H     __HEADER_MACH(display)
 #define __NIC_H         __HEADER_MACH(nic)
+#define __SCRATCHPAD_H  __HEADER_MACH(scratchpad)
 
 __BEGIN_SYS
 
@@ -34,6 +35,7 @@ typedef PC_RTC          RTC;
 typedef PC_EEPROM       EEPROM;
 typedef PC_UART         UART;
 typedef IF<Traits<Serial_Display>::enabled, Serial_Display, PC_Display>::Result Display;
+typedef PC_Scratchpad   Scratchpad;
 
 __END_SYS
 

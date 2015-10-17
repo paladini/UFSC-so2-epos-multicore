@@ -4,6 +4,7 @@
 #define __malloc_h
 
 #include <utility/string.h>
+#include <system.h>
 #include <application.h>
 
 extern "C"
@@ -11,7 +12,10 @@ extern "C"
     // Standard C Library allocators
     inline void * malloc(size_t bytes) {
         __USING_SYS;
-        return Application::_heap->alloc(bytes);
+        if(Traits<System>::multiheap)
+            return Application::_heap->alloc(bytes);
+        else
+            return System::_heap->alloc(bytes);
     }
 
     inline void * calloc(size_t n, unsigned int bytes) {
@@ -22,7 +26,10 @@ extern "C"
 
     inline void free(void * ptr) {
         __USING_SYS;
-       	Heap::free(ptr);
+        if(Traits<System>::multiheap)
+            Heap::typed_free(ptr);
+        else
+            Heap::untyped_free(System::_heap, ptr);
     }
 }
 

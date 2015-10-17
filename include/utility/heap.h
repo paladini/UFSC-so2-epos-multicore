@@ -12,6 +12,9 @@ __BEGIN_UTIL
 // Heap
 class Heap: private Grouping_List<char>
 {
+protected:
+    static const bool typed = Traits<System>::multiheap;
+
 public:
     using Grouping_List<char>::empty;
     using Grouping_List<char>::size;
@@ -36,7 +39,8 @@ public:
             while((bytes % sizeof(void *)))
                 ++bytes;
 
-        bytes += sizeof(Heap*);
+        if(typed)
+            bytes += sizeof(void *);  // add room for heap pointer
         bytes += sizeof(int);         // add room for size
         if(bytes < sizeof(Element))
             bytes = sizeof(Element);
@@ -49,7 +53,8 @@ public:
 
         int * addr = reinterpret_cast<int *>(e->object() + e->size());
 
-        *addr++ = reinterpret_cast<int>(this);
+        if(typed)
+            *addr++ = reinterpret_cast<int>(this);
         *addr++ = bytes;
 
         db<Heaps>(TRC) << ") => " << reinterpret_cast<void *>(addr) << endl;
@@ -67,10 +72,16 @@ public:
         }
     }
 
-    static void free(void * ptr) {
+    static void typed_free(void * ptr) {
         int * addr = reinterpret_cast<int *>(ptr);
         unsigned int bytes = *--addr;
-        Heap* heap = reinterpret_cast<Heap*>(*--addr);
+        Heap * heap = reinterpret_cast<Heap *>(*--addr);
+        heap->free(addr, bytes);
+    }
+
+    static void untyped_free(Heap * heap, void * ptr) {
+        int * addr = reinterpret_cast<int *>(ptr);
+        unsigned int bytes = *--addr;
         heap->free(addr, bytes);
     }
 

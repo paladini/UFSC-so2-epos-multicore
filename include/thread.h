@@ -7,7 +7,6 @@
 #include <utility/handler.h>
 #include <cpu.h>
 #include <machine.h>
-#include <scheduler.h>
 
 extern "C" { void __exit(); }
 
@@ -21,13 +20,8 @@ class Thread
     friend class Alarm;
     friend class IA32;
 
-public:
-    // Thread Queue
-    typedef RoundRobin Criterion;
-    typedef Ordered_Queue<Thread, Criterion, Scheduler<Thread>::Element> Queue;
-
 protected:
-    static const bool preemptive = Criterion::preemptive;
+    static const bool preemptive = Traits<Thread>::preemptive;
     static const bool reboot = Traits<System>::reboot;
 
     static const unsigned int QUANTUM = Traits<Thread>::QUANTUM;
@@ -46,15 +40,28 @@ public:
         FINISHING
     };
 
+    // Thread Priority
+    typedef unsigned int Priority;
+    enum {
+        MAIN   = 0,
+        HIGH   = 1,
+        NORMAL = (unsigned(1) << (sizeof(int) * 8 - 1)) - 4,
+        LOW    = (unsigned(1) << (sizeof(int) * 8 - 1)) - 3,
+        IDLE   = (unsigned(1) << (sizeof(int) * 8 - 1)) - 2
+    };
+
     // Thread Configuration
     struct Configuration {
-        Configuration(const State & s = READY, const Criterion & p = Criterion::NORMAL, unsigned int ss = STACK_SIZE)
+        Configuration(const State & s = READY, const Priority & p = NORMAL, unsigned int ss = STACK_SIZE)
         : state(s), priority(p), stack_size(ss) {}
 
         State state;
-        Criterion priority;
+        Priority priority;
         unsigned int stack_size;
     };
+
+    // Thread Queue
+    typedef Ordered_Queue<Thread, Priority> Queue;
 
 public:
     template<typename ... Tn>
@@ -65,8 +72,8 @@ public:
 
     const volatile State & state() const { return _state; }
 
-    const volatile Criterion & priority() const { return _link.rank(); }
-    void priority(const Criterion & p);
+    const volatile Priority & priority() const { return _link.rank(); }
+    void priority(const Priority & p);
 
     int join();
     void pass();
@@ -81,11 +88,11 @@ protected:
     void constructor_prolog(unsigned int stack_size);
     void constructor_epilog(const Log_Addr & entry, unsigned int stack_size);
 
-    static Thread * volatile running() { return scheduler.chosen()->object(); }
+    static Thread * volatile running() { return _running; }
 
     static void lock() { CPU::int_disable(); }
     static void unlock() { CPU::int_enable(); }
-    static bool locked() { return CPU::int_enabled(); }
+    static bool locked() { return CPU::int_disabled(); }
 
     static void sleep(Queue * q);
     static void wakeup(Queue * q);
@@ -107,20 +114,21 @@ protected:
     volatile State _state;
     Queue * _waiting;
     Thread * volatile _joining;
-    Scheduler<Thread>::Element _link;
+    Queue::Element _link;
 
     static volatile unsigned int _thread_count;
     static Scheduler_Timer * _timer;
 
 private:
-    static Scheduler<Thread> scheduler;
-
+    static Thread * volatile _running;
+    static Queue _ready;
+    static Queue _suspended;
 };
 
 
 template<typename ... Tn>
 inline Thread::Thread(int (* entry)(Tn ...), Tn ... an)
-: _state(READY), _waiting(0), _joining(0), _link(this, Criterion::NORMAL)
+: _state(READY), _waiting(0), _joining(0), _link(this, NORMAL)
 {
     constructor_prolog(STACK_SIZE);
     _context = CPU::init_stack(_stack + STACK_SIZE, &__exit, entry, an ...);

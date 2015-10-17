@@ -6,32 +6,25 @@ typedef __SIZE_TYPE__ size_t;
 #define __types_h
 
 // Memory allocators
+__BEGIN_API
+enum System_Allocator { SYSTEM };
+enum Scratchpad_Allocator { SCRATCHPAD };
+__END_API
+
 extern "C"
 {
     void * malloc(size_t);
     void free(void *);
 }
 
-__BEGIN_API
-
-enum Heap_System {
-	SYSTEM
-};
-
-enum Heap_Uncached {
-	UNCACHED
-};
-
-__END_API
-
-void * operator new(size_t, const _API::Heap_System &);
-void * operator new[](size_t, const _API::Heap_System &);
-
-void * operator new(size_t, const _API::Heap_Uncached &);
-void * operator new[](size_t, const _API::Heap_Uncached &);
-
 inline void * operator new(size_t s, void * a) { return a; }
 inline void * operator new[](size_t s, void * a) { return a; }
+
+void * operator new(size_t, const EPOS::System_Allocator &);
+void * operator new[](size_t, const EPOS::System_Allocator &);
+
+void * operator new(size_t, const EPOS::Scratchpad_Allocator &);
+void * operator new[](size_t, const EPOS::Scratchpad_Allocator &);
 
 // Utilities
 __BEGIN_UTIL
@@ -119,6 +112,7 @@ enum
     TIMER_ID,
     RTC_ID,
     EEPROM_ID,
+    SCRATCHPAD_ID,
     UART_ID,
     DISPLAY_ID,
 
@@ -156,6 +150,7 @@ template<> struct Type<PC_UART> { static const Type_Id ID = UART_ID; };
 template<> struct Type<PC_RTC> { static const Type_Id ID = RTC_ID; };
 template<> struct Type<PC_PCI> { static const Type_Id ID = PCI_ID; };
 template<> struct Type<PC_Display> { static const Type_Id ID = DISPLAY_ID; };
+template<> struct Type<PC_Scratchpad> { static const Type_Id ID = SCRATCHPAD_ID; };
 
 template<> struct Type<Thread> { static const Type_Id ID = THREAD_ID; };
 

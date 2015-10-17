@@ -4,7 +4,6 @@
 #define __application_h
 
 #include <utility/heap.h>
-#include <segment.h>
 
 extern "C"
 {
@@ -18,26 +17,18 @@ class Application
 {
     friend class Init_Application;
     friend void * ::malloc(size_t);
-    friend void * ::operator new(size_t, const EPOS::Heap_Uncached&);
-    friend void * ::operator new[](size_t, const EPOS::Heap_Uncached&);
+    friend void ::free(void *);
 
 private:
     static void init();
 
 private:
-    static char _preheap[sizeof(Segment) + sizeof(Heap)];
+    static char _preheap[sizeof(Heap)];
     static Heap * _heap;
-    static char _uncached_preheap[sizeof(Segment) + sizeof(Heap)];
-    static Heap* _uncached_heap;
 };
 
 __END_SYS
 
-inline void * operator new(size_t bytes, const EPOS::Heap_Uncached&) {
-	return EPOS::Application::_uncached_heap->alloc(bytes);
-}
-inline void * operator new[](size_t bytes, const EPOS::Heap_Uncached&) {
-	return EPOS::Application::_uncached_heap->alloc(bytes);
-}
+#include <utility/malloc.h>
 
 #endif

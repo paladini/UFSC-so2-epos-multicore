@@ -5,6 +5,7 @@
 #include <display.h>
 #include <machine.h>
 #include <system.h>
+#include <segment.h>
 #include <thread.h>
 
 __BEGIN_SYS
@@ -30,6 +31,7 @@ OStream kerr;
 // System class attributes
 System_Info<Machine> * System::_si = reinterpret_cast<System_Info<Machine> *>(Memory_Map<Machine>::SYS_INFO);
 char System::_preheap[];
+Segment * System::_heap_segment;
 Heap * System::_heap;
 
 __END_SYS
