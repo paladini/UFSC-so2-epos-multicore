@@ -16,6 +16,7 @@ __BEGIN_SYS
 class Alarm
 {
     friend class System;
+    friend class Scheduling_Criteria::FCFS;
 
 private:
     typedef TSC::Hertz Hertz;
@@ -75,6 +76,12 @@ public:
 
 private:
     Microsecond _time;
+};
+
+
+// The following Scheduling Criteria depend on Alarm, which is not yet available at scheduler.h
+namespace Scheduling_Criteria {
+    inline FCFS::FCFS(int p): Priority((p == IDLE) ? IDLE : Alarm::_elapsed) {}
 };
 
 __END_SYS

@@ -3,6 +3,7 @@
 #include <utility/heap.h>
 #include <system.h>
 #include <thread.h>
+#include <alarm.h> // for FCFS
 
 extern "C" { void __epos_app_entry(); }
 
@@ -28,7 +29,7 @@ public:
         // If EPOS is not a kernel, then adjust the application entry point to __epos_app_entry,
         // which will directly call main(). In this case, _init will have already been called,
         // before Init_Application, to construct main()'s global objects.
-        Thread::_running = new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), reinterpret_cast<int (*)()>(__epos_app_entry));
+        Thread * first = new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), reinterpret_cast<int (*)()>(__epos_app_entry));
 
         // Idle thread creation must succeed main, thus avoiding implicit rescheduling
         new (SYSTEM) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);
@@ -37,11 +38,11 @@ public:
 
         db<Init>(INF) << "INIT ends here!" << endl;
 
-        db<Init, Thread>(INF) << "Dispatching the first thread: " << Thread::running() << endl;
+        db<Init, Thread>(INF) << "Dispatching the first thread: " << first << endl;
 
         This_Thread::not_booting();
 
-        Thread::running()->_context->load();
+        first->_context->load();
     }
 };
 
