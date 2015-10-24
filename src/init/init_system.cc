@@ -16,6 +16,7 @@ private:
 public:
     Init_System() {
         db<Init>(TRC) << "Init_System()" << endl;
+        Machine::smp_init(System::info()->bm.n_cpus);
 
         // Initialize the processor
         db<Init>(INF) << "Initializing the CPU: " << endl;

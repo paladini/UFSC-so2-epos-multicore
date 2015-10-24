@@ -17,18 +17,20 @@ private:
 
 public:
     Init_Application() {
-        db<Init>(TRC) << "Init_Application()" << endl;
+    	if(Machine::cpu_id() == 0){
+			db<Init>(TRC) << "Init_Application()" << endl;
 
-        // Initialize Application's heap
-        db<Init>(INF) << "Initializing application's heap: " << endl;
-        if(Traits<System>::multiheap) { // Heap in data segment arranged by SETUP
-            char * stack = MMU::align_page(&_end);
-            char * heap = stack + MMU::align_page(Traits<Application>::STACK_SIZE);
-            Application::_heap = new (&Application::_preheap[0]) Heap(heap, HEAP_SIZE);
-        } else
-            for(unsigned int frames = MMU::allocable(); frames; frames = MMU::allocable())
-                System::_heap->free(MMU::alloc(frames), frames * sizeof(MMU::Page));
-        db<Init>(INF) << "done!" << endl;
+			// Initialize Application's heap
+			db<Init>(INF) << "Initializing application's heap: " << endl;
+			if(Traits<System>::multiheap) { // Heap in data segment arranged by SETUP
+				char * stack = MMU::align_page(&_end);
+				char * heap = stack + MMU::align_page(Traits<Application>::STACK_SIZE);
+				Application::_heap = new (&Application::_preheap[0]) Heap(heap, HEAP_SIZE);
+			} else
+				for(unsigned int frames = MMU::allocable(); frames; frames = MMU::allocable())
+					System::_heap->free(MMU::alloc(frames), frames * sizeof(MMU::Page));
+			db<Init>(INF) << "done!" << endl;
+    	}
     }
 };
 

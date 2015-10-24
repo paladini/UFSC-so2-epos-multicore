@@ -16,6 +16,7 @@ __BEGIN_SYS
 volatile unsigned int Thread::_thread_count;
 Scheduler_Timer * Thread::_timer;
 Scheduler<Thread> Thread::_scheduler;
+Spin Thread::spin;
 
 // Methods
 void Thread::constructor_prolog(unsigned int stack_size)
@@ -337,24 +338,34 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
 
 int Thread::idle()
 {
-    while(_thread_count > 1) { // someone else besides idle
-        if(Traits<Thread>::trace_idle)
-            db<Thread>(TRC) << "Thread::idle(this=" << running() << ")" << endl;
+    while(true) { // someone else besides idle
+    	if(_thread_count >System::info()->bm.n_cpus){
 
-        CPU::int_enable();
-        CPU::halt();
+    		bool test = _thread_count > Machine::n_cpus();
+    		db<Thread>(TRC) << "count: " << _thread_count << endl;
+    		db<Thread>(TRC) << "N_CPUS: " << System::info()->bm.n_cpus << endl;
+    		db<Thread>(TRC) << "CPU#: " << Machine::cpu_id() << endl;
+    		db<Thread>(TRC) << "If: " << test << endl;
+
+			if(Traits<Thread>::trace_idle)
+				db<Thread>(TRC) << "Thread::idle(this=" << running() << ")" << endl;
+
+			CPU::int_enable();
+			CPU::halt();
+    	} else if(Machine::cpu_id() == 0){
+			CPU::int_disable();
+			db<Thread>(WRN) << "The last thread has exited!" << endl;
+			if(reboot) {
+				db<Thread>(WRN) << "Rebooting the machine ..." << endl;
+				Machine::reboot();
+			} else {
+				db<Thread>(WRN) << "Halting the machine ..." << endl;
+				CPU::halt();
+			}
+    	}else{
+    		CPU::halt();
+    	}
     }
-
-    CPU::int_disable();
-    db<Thread>(WRN) << "The last thread has exited!" << endl;
-    if(reboot) {
-        db<Thread>(WRN) << "Rebooting the machine ..." << endl;
-        Machine::reboot();
-    } else {
-        db<Thread>(WRN) << "Halting the machine ..." << endl;
-        CPU::halt();
-    }
-
     return 0;
 }
 
