@@ -54,6 +54,8 @@ public:
 					db<Init>(WRN) << "Due to lack of entropy, Random is a pseudo random numbers generator!" << endl;
 				db<Init>(INF) << "done!" << endl;
 			}
+        }else {
+        	 APIC_Timer::config(0, APIC_Timer::Count(-1), false, false);
         }
 
 		Machine::smp_barrier();
