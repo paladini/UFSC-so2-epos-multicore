@@ -1,10 +1,29 @@
 // EPOS OStream Implementation
 
 #include <utility/ostream.h>
+#include <machine.h>
 
 __BEGIN_UTIL
 
 const char OStream::_digits[] = "0123456789abcdef";
+
+void OStream::take()
+{
+    // We cannot use Spin lock here
+
+    int me = Machine::cpu_id();
+
+    // Compare and exchange:
+    // Atomically compare _owner and -1. If they're equal, replace _owner by 'me' and return the new value of '_owner'
+    // Otherwise don't replace anything and return the current value of '_owner'
+    while(CPU::cas(_owner, -1, me) != me);
+}
+
+void OStream::release()
+{
+    // -1 means: no body 'owns' the output stream
+    _owner = -1;
+}
 
 int OStream::itoa(int v, char * s)
 {

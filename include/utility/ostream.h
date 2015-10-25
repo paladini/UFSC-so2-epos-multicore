@@ -21,15 +21,17 @@ public:
     struct Err {};
 
 public:
-    OStream(): _base(10), _error(false) {}
+    OStream(): _base(10), _error(false), _owner(-1) {}
 
     OStream & operator<<(const Begl & begl) {
-        return *this;
+        take();
+        return *this << "[cpu=" << _owner << "]    ";
     }
     
     OStream & operator<<(const Endl & endl) {
         print("\n");
         _base = 10;
+        release();
         return *this;
     }
 
@@ -164,6 +166,9 @@ public:
 private:
     void print(const char * s) { _print(s); }
 
+    void take();
+    void release();
+
     int itoa(int v, char * s);
     int utoa(unsigned int v, char * s, unsigned int i = 0);
     int llitoa(long long int v, char * s);
@@ -173,6 +178,7 @@ private:
 private:
     int _base;
     volatile bool _error;
+    volatile int _owner;
 
     static const char _digits[];
 }; 
