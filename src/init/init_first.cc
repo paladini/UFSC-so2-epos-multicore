@@ -23,6 +23,9 @@ public:
             CPU::int_enable();
             return;
         }
+        CPU::int_disabled();
+        Machine::smp_barrier();
+
         Thread * first;
 		db<Init>(INF) << "Initializing the first thread: " << endl;
 
@@ -46,6 +49,7 @@ public:
         This_Thread::not_booting();
 
         Machine::smp_barrier();
+        CPU::int_enable();
 
         first->_context->load();
     }

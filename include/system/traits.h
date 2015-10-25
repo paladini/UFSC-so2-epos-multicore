@@ -28,7 +28,7 @@ template<> struct Traits<Build>
     enum {Legacy};
     static const unsigned int MODEL = Legacy;
 
-    static const unsigned int CPUS = 2;
+    static const unsigned int CPUS = 8;
     static const unsigned int NODES = 1; // > 1 => NETWORKING
 };
 
@@ -125,7 +125,7 @@ template<> struct Traits<Thread>: public Traits<void>
     static const bool trace_idle = hysterically_debugged;
 };
 
-template<> struct Traits<Scheduler<Thread> >: public Traits<void>
+template<> struct Traits<Scheduler<Thread, Traits<Build>::CPUS> >: public Traits<void>
 {
     static const bool debugged = Traits<Thread>::trace_idle || hysterically_debugged;
 };

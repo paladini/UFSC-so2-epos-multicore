@@ -56,6 +56,7 @@ public:
 			}
         }
 
+		Machine::smp_barrier();
         // Initialization continues at init_first
     }
 };

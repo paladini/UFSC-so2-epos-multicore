@@ -31,6 +31,8 @@ public:
 					System::_heap->free(MMU::alloc(frames), frames * sizeof(MMU::Page));
 			db<Init>(INF) << "done!" << endl;
     	}
+
+    	Machine::smp_barrier();
     }
 };
 

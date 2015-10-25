@@ -83,11 +83,7 @@ namespace Scheduling_Criteria
 template<typename T,
 		  unsigned int n_chosen = Traits<Build>::CPUS,
 		  typename R = typename T::Criterion>
-class Scheduling_Queue: public Scheduling_List<T> {
-public:
-	Scheduling_Queue(unsigned int n_cpu) : Scheduling_List<T>( n_cpu ) {}
-
-};
+class Scheduling_Queue: public Scheduling_List<T, n_chosen> {};
 
 // Scheduler
 // Objects subject to scheduling by Scheduler must declare a type "Criterion"
@@ -102,11 +98,11 @@ private:
 
 public:
     typedef typename T::Criterion Criterion;
-    typedef Scheduling_List<T, Criterion> Queue;
+    typedef Scheduling_List<T, n_chosen, Criterion> Queue;
     typedef typename Queue::Element Element;
 
 public:
-    Scheduler(unsigned int n_cpu) : Scheduling_Queue<T>( n_cpu ) {}
+    Scheduler() {}
 
     unsigned int schedulables() { return Base::size(); }
 
