@@ -29,7 +29,6 @@ void PC_IC::init()
     for(unsigned int i = 0; i < INTS; i++)
  	_int_vector[i] = int_not;
 
-    remap();
     disable();
 
     CPU::int_enable();
