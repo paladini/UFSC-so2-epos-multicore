@@ -94,20 +94,15 @@ protected:
     void constructor_prolog(unsigned int stack_size);
     void constructor_epilog(const Log_Addr & entry, unsigned int stack_size);
 
-    static Thread * volatile running() { return _scheduler.chosen(); }
+    static Thread * volatile running() { return _scheduler.chosen( cpu_id() ); }
 
     Queue::Element * link() { return &_link; }
 
     Criterion & criterion() { return const_cast<Criterion &>(_link.rank()); }
 
-    static void lock() {
-    	CPU::int_disable();
-    	spin.acquire();
-    }
-    static void unlock() {
-    	spin.release();
-    	CPU::int_enable();
-    }
+    static unsigned int cpu_id() { return Machine::cpu_id(); }
+    static void lock() { CPU::int_disable(); }
+    static void unlock() { CPU::int_enable(); }
     static bool locked() { return CPU::int_disabled(); }
 
     void suspend(bool locked);

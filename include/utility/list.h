@@ -978,6 +978,7 @@ class Relative_List: public Ordered_List<T, R, El, true> {};
 // In this implementation, the chosen element is kept outside the list
 // referenced by the _chosen attribute.
 template<typename T,
+		  unsigned int n_chosen = Traits<Build>::CPUS,
           typename R = typename T::Criterion,
           typename El = List_Elements::Doubly_Linked_Scheduling<T, R> >
 class Scheduling_List: private Ordered_List<T, R, El>
@@ -992,7 +993,10 @@ public:
     typedef typename Base::Iterator Iterator;
 
 public:
-    Scheduling_List(): _chosen(0) {}
+    Scheduling_List() {
+    	 for(unsigned int i = 0; i < n_chosen; i++)
+    		 _chosen[i] = 0;
+    }
 
     using Base::empty;
     using Base::size;
@@ -1001,76 +1005,75 @@ public:
     using Base::begin;
     using Base::end;
 
-    Element * volatile & chosen() { return _chosen; }
+    Element * volatile & chosen(unsigned int cpu_id) { return _chosen[cpu_id]; }
 
-    void insert(Element * e) {
+    void insert(Element * e, unsigned int cpu_id) {
         db<Lists>(TRC) << "Scheduling_List::insert(e=" << e
                        << ") => {p=" << (e ? e->prev() : (void *) -1)
                        << ",o=" << (e ? e->object() : (void *) -1)
                        << ",n=" << (e ? e->next() : (void *) -1)
                        << "}" << endl;
 
-        if(_chosen)
+        if(_chosen[cpu_id])
             Base::insert(e);
         else
-            _chosen = e;
+            _chosen[cpu_id] = e;
     }
 
-    Element * remove(Element * e) {
+    Element * remove(Element * e, unsigned int cpu_id) {
         db<Lists>(TRC) << "Scheduling_List::remove(e=" << e
                        << ") => {p=" << (e ? e->prev() : (void *) -1)
                        << ",o=" << (e ? e->object() : (void *) -1)
                        << ",n=" << (e ? e->next() : (void *) -1)
                        << "}" << endl;
 
-        if(e == _chosen)
-            _chosen = Base::remove_head();
+        if(e == _chosen[cpu_id])
+            _chosen[cpu_id] = Base::remove_head();
         else
             e = Base::remove(e);
 
         return e;
     }
 
-    Element * choose() {
+    Element * choose(unsigned int cpu_id) {
         db<Lists>(TRC) << "Scheduling_List::choose()" << endl;
 
         if(!empty()) {
-            Base::insert(_chosen);
-            _chosen = Base::remove_head();
+            Base::insert(_chosen[cpu_id]);
+            _chosen[cpu_id] = Base::remove_head();
         }
 
-        return _chosen;
+        return _chosen[cpu_id];
     }
 
-    Element * choose_another() {
+    Element * choose_another(unsigned int cpu_id) {
         db<Lists>(TRC) << "Scheduling_List::choose_another()" << endl;
 
         if(!empty() && head()->rank() != R::IDLE) {
-            Element * tmp = _chosen;
-            _chosen = Base::remove_head();
+            Element * tmp = _chosen[cpu_id];
+            _chosen[cpu_id] = Base::remove_head();
             Base::insert(tmp);
         }
 
-        return _chosen;
+        return _chosen[cpu_id];
     }
-
-    Element * choose(Element * e) {
+    Element * choose(Element * e, unsigned int cpu_id) {
         db<Lists>(TRC) << "Scheduling_List::choose(e=" << e
                        << ") => {p=" << (e ? e->prev() : (void *) -1)
                        << ",o=" << (e ? e->object() : (void *) -1)
                        << ",n=" << (e ? e->next() : (void *) -1)
                        << "}" << endl;
 
-        if(e != _chosen) {
-            Base::insert(_chosen);
-            _chosen = Base::remove(e);
+        if(e != _chosen[cpu_id]) {
+            Base::insert(_chosen[cpu_id]);
+            _chosen[cpu_id] = Base::remove(e);
         }
 
-        return _chosen;
+        return _chosen[cpu_id];
     }
 
 private:
-    Element * volatile _chosen;
+    Element * volatile _chosen[n_chosen];
 };
 
 
