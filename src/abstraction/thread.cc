@@ -339,26 +339,24 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
 int Thread::idle()
 {
 	db<Thread>(TRC) << "Start Thread idle(this=" << running() << ")" << " CPU: " << Machine::cpu_id() << endl;
-    while(true) {
-    	if(_thread_count > System::info()->bm.n_cpus){
+	while(_thread_count > Traits<PC>::CPUS) { // someone else besides idle
+        if(Traits<Thread>::trace_idle)
+            db<Thread>(TRC) << "Thread::idle(this=" << running() << ")" << endl;
 
-			if(Traits<Thread>::trace_idle)
-				db<Thread>(TRC) << "Thread::idle(this=" << running() << ")" << endl;
-
-			CPU::int_enable();
-			CPU::halt();
-    	} else {
-			CPU::int_disable();
-			db<Thread>(WRN) << "The last thread has exited!" << endl;
-			if(reboot) {
-				db<Thread>(WRN) << "Rebooting the machine ..." << endl;
-				Machine::reboot();
-			} else {
-				db<Thread>(WRN) << "Halting the machine ..." << endl;
-				CPU::halt();
-			}
-    	}
+        CPU::int_enable();
+        CPU::halt();
     }
+
+    CPU::int_disable();
+    db<Thread>(WRN) << "The last thread has exited!" << endl;
+    if(reboot) {
+        db<Thread>(WRN) << "Rebooting the machine ..." << endl;
+        Machine::reboot();
+    } else {
+        db<Thread>(WRN) << "Halting the machine ..." << endl;
+        CPU::halt();
+    }
+
     return 0;
 }
 
