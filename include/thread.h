@@ -100,8 +100,8 @@ protected:
 
     Criterion & criterion() { return const_cast<Criterion &>(_link.rank()); }
 
-    static void lock() { CPU::int_disable(); }
-    static void unlock() { CPU::int_enable(); }
+    static void lock() { CPU::int_disable(); spin.acquire(); }
+    static void unlock() { spin.release(); CPU::int_enable(); }
     static bool locked() { return CPU::int_disabled(); }
 
     void suspend(bool locked);

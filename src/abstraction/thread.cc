@@ -309,6 +309,7 @@ void Thread::time_slicer(const IC::Interrupt_Id & i)
 {
     lock();
 
+    db<Thread>(TRC) << "Thread::time_slicer in cpu: " << Machine::cpu_id() << endl;
     reschedule();
 }
 
@@ -329,6 +330,7 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
         db<Thread>(INF) << "prev={" << prev << ",ctx=" << *prev->_context << "}" << endl;
         db<Thread>(INF) << "next={" << next << ",ctx=" << *next->_context << "}" << endl;
 
+		spin.release();
         CPU::switch_context(&prev->_context, next->_context);
     }
 

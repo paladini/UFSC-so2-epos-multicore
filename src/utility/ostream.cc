@@ -3,26 +3,37 @@
 #include <utility/ostream.h>
 #include <machine.h>
 
+extern "C" { void _panic(); }
+
 __BEGIN_UTIL
 
 const char OStream::_digits[] = "0123456789abcdef";
 
 void OStream::take()
 {
-    // We cannot use Spin lock here
+	static char tag[] = "<0>: ";
 
-    int me = Machine::cpu_id();
-
-    // Compare and exchange:
-    // Atomically compare _owner and -1. If they're equal, replace _owner by 'me' and return the new value of '_owner'
-    // Otherwise don't replace anything and return the current value of '_owner'
-    while(CPU::cas(_owner, -1, me) != me);
+	int me = Machine::cpu_id();
+	int last = CPU::cas(_lock, -1, me);
+	for(int i = 0, owner = last; (i < 10) && (owner != me); i++, owner = CPU::cas(_lock, -1, me));
+	if(last != me) {
+		tag[1] = '0' + Machine::cpu_id();
+		print(tag);
+	}
 }
 
 void OStream::release()
 {
-    // -1 means: no body 'owns' the output stream
-    _owner = -1;
+    static char tag[] = " :<0>";
+
+    if(_lock != -1) {
+        tag[3] = '0' + Machine::cpu_id();
+        print(tag);
+
+        _lock = -1;
+    }
+    if(_error)
+        _panic();
 }
 
 int OStream::itoa(int v, char * s)

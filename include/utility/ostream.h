@@ -21,17 +21,17 @@ public:
     struct Err {};
 
 public:
-    OStream(): _base(10), _error(false), _owner(-1) {}
+    OStream(): _base(10), _error(false), _lock(-1) {}
 
     OStream & operator<<(const Begl & begl) {
         take();
-        return *this << "[cpu=" << _owner << "]    ";
+        return *this;
     }
     
     OStream & operator<<(const Endl & endl) {
+        release();
         print("\n");
         _base = 10;
-        release();
         return *this;
     }
 
@@ -178,7 +178,7 @@ private:
 private:
     int _base;
     volatile bool _error;
-    volatile int _owner;
+    volatile int _lock;
 
     static const char _digits[];
 }; 

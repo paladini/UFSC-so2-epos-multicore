@@ -39,6 +39,8 @@ public:
 			Machine::init();
 			db<Init>(INF) << "done!" << endl;
 
+			Machine::smp_barrier();
+
 			// Initialize system abstractions
 			db<Init>(INF) << "Initializing system abstractions: " << endl;
 			System::init();
@@ -55,10 +57,10 @@ public:
 				db<Init>(INF) << "done!" << endl;
 			}
         }else {
-        	 APIC_Timer::config(0, APIC_Timer::Count(-1), false, false);
+        	Machine::smp_barrier();
+        	Timer::init();
         }
 
-		Machine::smp_barrier();
         // Initialization continues at init_first
     }
 };
