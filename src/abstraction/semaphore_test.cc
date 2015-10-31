@@ -6,6 +6,7 @@
 #include <semaphore.h>
 #include <alarm.h>
 #include <display.h>
+#include <architecture/ia32/cpu.h>
 
 using namespace EPOS;
 
@@ -18,13 +19,10 @@ Semaphore * chopstick[5];
 
 OStream cout;
 
-void countDelay(){
-	unsigned char i, j;
-	j = 0;
-	while(--j) {
-	    i = 0;
-	    while(--i)
-	    	asm("");
+void countDelay(int delay_ms){
+    unsigned long iterations = delay_ms * (CPU::clock() / 1000);
+	for(int i; i < iterations; i++) {
+        asm("");
 	}
 }
 
@@ -40,8 +38,7 @@ int philosopher(int n, int l, int c)
         cout << "Philosopher # "<< n << " is thinking on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
-        countDelay();
-        countDelay();
+        countDelay(1000);
 
         chopstick[first]->p();   // get first chopstick
         chopstick[second]->p();   // get second chopstick
@@ -51,8 +48,7 @@ int philosopher(int n, int l, int c)
         cout << "Philosopher # "<< n << " is eating on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
-        countDelay();
-        countDelay();
+        countDelay(1000);
 
         chopstick[first]->v();   // release first chopstick
         chopstick[second]->v();   // release second chopstick
