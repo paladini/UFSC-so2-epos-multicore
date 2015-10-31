@@ -18,14 +18,14 @@ Semaphore * chopstick[5];
 
 OStream cout;
 
-int countDelay(int _count){
-	int count = _count;
-	int aux = 0;
-	for(int i=0; aux<count; i++){
-		cout << " counting on #" << Machine::cpu_id() << endl;
-		aux = i;
+void countDelay(){
+	unsigned char i, j;
+	j = 0;
+	while(--j) {
+	    i = 0;
+	    while(--i)
+	    	asm("");
 	}
-	return aux;
 }
 
 int philosopher(int n, int l, int c)
@@ -37,20 +37,22 @@ int philosopher(int n, int l, int c)
 
         table.lock();
         Display::position(l, c);
-        cout << "thinking on #" << Machine::cpu_id() << endl;
+        cout << "Philosopher # "<< n << " is thinking on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
-        countDelay(2000000);
+        countDelay();
+        countDelay();
 
         chopstick[first]->p();   // get first chopstick
         chopstick[second]->p();   // get second chopstick
 
         table.lock();
         Display::position(l, c);
-        cout << " eating on #" << Machine::cpu_id() << endl;
+        cout << "Philosopher # "<< n << " is eating on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
-        countDelay(1000000);
+        countDelay();
+        countDelay();
 
         chopstick[first]->v();   // release first chopstick
         chopstick[second]->v();   // release second chopstick
