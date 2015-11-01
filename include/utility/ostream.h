@@ -24,12 +24,14 @@ public:
     OStream(): _base(10), _error(false), _lock(-1) {}
 
     OStream & operator<<(const Begl & begl) {
-        take();
+        if(Traits<System>::multicore)
+            take();
         return *this;
     }
     
     OStream & operator<<(const Endl & endl) {
-        release();
+        if(Traits<System>::multicore)
+            release();
         print("\n");
         _base = 10;
         return *this;
