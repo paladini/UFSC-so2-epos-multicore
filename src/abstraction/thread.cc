@@ -358,6 +358,7 @@ int Thread::idle()
         db<Thread>(WRN) << "TREMBLE OVER OF THE IDLE POWER" << endl;
         db<Thread>(WRN) << "Just kiddin" << endl;
         db<Thread>(WRN) << "The last thread has exited!" << endl;
+
         if(reboot) {
             db<Thread>(WRN) << "Rebooting the machine ..." << endl;
             Machine::reboot();

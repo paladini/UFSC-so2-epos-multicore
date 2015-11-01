@@ -34,8 +34,7 @@ int philosopher(int n, int l, int c)
     for(int i = iterations; i > 0; i--) {
 
         table.lock();
-        Display::position(l, c);
-        cout << "P"<< n << " is thinking on CPU# " << Machine::cpu_id() << endl;
+        cout << "Philosopher # "<< n << " is thinking on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
         countDelay(500);
@@ -44,8 +43,7 @@ int philosopher(int n, int l, int c)
         chopstick[second]->p();   // get second chopstick
 
         table.lock();
-        Display::position(l, c);
-        cout << "P"<< n << " is eeeating on CPU# " << Machine::cpu_id() << endl;
+        cout << "Philosopher # "<< n << " is eating on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
         countDelay(500);
@@ -55,8 +53,7 @@ int philosopher(int n, int l, int c)
     }
 
     table.lock();
-    Display::position(l, c);
-    cout << "Philos#"<< n << " done  on CPU# " << Machine::cpu_id() << endl;
+    cout << "Philosopher " << n << " done  on CPU#" << Machine::cpu_id() << endl;
     table.unlock();
 
     return iterations;
@@ -73,24 +70,12 @@ int main()
         chopstick[i] = new Semaphore;
 
     phil[0] = new Thread(&philosopher, 0,  5, 32);
-    phil[1] = new Thread(&philosopher, 1, 10, 54);
-    phil[2] = new Thread(&philosopher, 2, 16, 49);
-    phil[3] = new Thread(&philosopher, 3, 16, 14);
-    phil[4] = new Thread(&philosopher, 4, 10, 10);
+    phil[1] = new Thread(&philosopher, 1, 10, 44);
+    phil[2] = new Thread(&philosopher, 2, 16, 39);
+    phil[3] = new Thread(&philosopher, 3, 16, 24);
+    phil[4] = new Thread(&philosopher, 4, 10, 20);
 
     cout << "Philosophers are alive and angry! (on CPU# " << Machine::cpu_id() << endl;
-
-    Display::position(7, 54);
-    cout << '/' << endl;
-    Display::position(13, 54);
-    cout << '\\'<< endl;
-    Display::position(16, 45);
-    cout << '|'<< endl;
-    Display::position(13, 37);
-    cout << '/'<< endl;
-    Display::position(7, 37);
-    cout << '\\'<< endl;
-    Display::position(19, 0);
 
     cout << "The dinner is served ... on Table#" << Machine::cpu_id() << endl;
     table.unlock();
@@ -98,7 +83,6 @@ int main()
     for(int i = 0; i < 5; i++) {
         int ret = phil[i]->join();
         table.lock();
-        Display::position(20 + i, 0);
         cout << "Philosopher " << i << " ate " << ret << " times (on #" << Machine::cpu_id() << ")" << endl;
         table.unlock();
     }
@@ -108,7 +92,7 @@ int main()
     for(int i = 0; i < 5; i++)
         delete phil[i];
 
-    cout << "Dinner is Over! on Table#" << Machine::cpu_id() << endl;
+    cout << "Dinna is Ova! on Table#" << Machine::cpu_id() << endl;
 
     return 0;
 }
