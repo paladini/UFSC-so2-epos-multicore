@@ -94,7 +94,7 @@ protected:
     void constructor_prolog(unsigned int stack_size);
     void constructor_epilog(const Log_Addr & entry, unsigned int stack_size);
 
-    static Thread * volatile running() { return _scheduler.chosen( Machine::cpu_id() ); }
+    static Thread * volatile running() { return _scheduler.chosen(); }
 
     Queue::Element * link() { return &_link; }
 
