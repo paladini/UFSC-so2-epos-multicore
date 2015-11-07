@@ -1,0 +1,500 @@
+diff --git a/app/philosophers_dinner_for_log.cc b/app/philosophers_dinner_for_log.cc
+index e69de29..3eae0b3 100644
+--- a/app/philosophers_dinner_for_log.cc
++++ b/app/philosophers_dinner_for_log.cc
+@@ -0,0 +1,98 @@
++// EPOS Semaphore Abstraction Test Program
++
++#include <utility/ostream.h>
++#include <thread.h>
++#include <mutex.h>
++#include <semaphore.h>
++#include <alarm.h>
++#include <display.h>
++#include <architecture/ia32/cpu.h>
++
++using namespace EPOS;
++
++const int iterations = 10;
++
++Mutex table;
++
++Thread * phil[5];
++Semaphore * chopstick[5];
++
++OStream cout;
++
++void countDelay(int delay_ms){
++    unsigned long iterations = delay_ms * (CPU::clock() / 1000);
++	for(int i; i < iterations; i++) {
++        asm("");
++	}
++}
++
++int philosopher(int n, int l, int c)
++{
++    int first = (n < 4)? n : 0;
++    int second = (n < 4)? n + 1 : 4;
++
++    for(int i = iterations; i > 0; i--) {
++
++        table.lock();
++        cout << "Philosopher # "<< n << " is thinking on CPU# " << Machine::cpu_id() << endl;
++        table.unlock();
++
++        countDelay(500);
++
++        chopstick[first]->p();   // get first chopstick
++        chopstick[second]->p();   // get second chopstick
++
++        table.lock();
++        cout << "Philosopher # "<< n << " is eating on CPU# " << Machine::cpu_id() << endl;
++        table.unlock();
++
++        countDelay(500);
++
++        chopstick[first]->v();   // release first chopstick
++        chopstick[second]->v();   // release second chopstick
++    }
++
++    table.lock();
++    cout << "Philosopher " << n << " done  on CPU#" << Machine::cpu_id() << endl;
++    table.unlock();
++
++    return iterations;
++}
++
++int main()
++{
++    table.lock();
++    Display::clear();
++    Display::position(0, 0);
++    cout << "The Philosopher's Dinner: on #" << Machine::cpu_id() << endl;
++
++    for(int i = 0; i < 5; i++)
++        chopstick[i] = new Semaphore;
++
++    phil[0] = new Thread(&philosopher, 0,  5, 32);
++    phil[1] = new Thread(&philosopher, 1, 10, 44);
++    phil[2] = new Thread(&philosopher, 2, 16, 39);
++    phil[3] = new Thread(&philosopher, 3, 16, 24);
++    phil[4] = new Thread(&philosopher, 4, 10, 20);
++
++    cout << "Philosophers are alive and angry! (on CPU# " << Machine::cpu_id() << endl;
++
++    cout << "The dinner is served ... on Table#" << Machine::cpu_id() << endl;
++    table.unlock();
++
++    for(int i = 0; i < 5; i++) {
++        int ret = phil[i]->join();
++        table.lock();
++        cout << "Philosopher " << i << " ate " << ret << " times (on #" << Machine::cpu_id() << ")" << endl;
++        table.unlock();
++    }
++
++    for(int i = 0; i < 5; i++)
++        delete chopstick[i];
++    for(int i = 0; i < 5; i++)
++        delete phil[i];
++
++    cout << "Dinna is Ova! on Table#" << Machine::cpu_id() << endl;
++
++    return 0;
++}
+diff --git a/include/scheduler.h b/include/scheduler.h
+index 2a2d9e4..c15acfb 100644
+--- a/include/scheduler.h
++++ b/include/scheduler.h
+@@ -54,9 +54,12 @@ namespace Scheduling_Criteria
+         static const bool timed = true;
+         static const bool dynamic = false;
+         static const bool preemptive = true;
++        static const unsigned int HEADS = Traits<Machine>::CPUS;
+ 
+     public:
+         RR(int p = NORMAL): Priority(p) {}
++
++        static unsigned int current_head() { return Machine::cpu_id(); }
+     };
+ 
+     // First-Come, First-Served (FIFO)
+@@ -81,7 +84,7 @@ namespace Scheduling_Criteria
+ 
+ // Scheduling_Queue
+ template<typename T, typename R = typename T::Criterion>
+-class Scheduling_Queue: public Scheduling_List<T> {};
++class Scheduling_Queue: public Multihead_Scheduling_List<T> {};
+ 
+ // Scheduler
+ // Objects subject to scheduling by Scheduler must declare a type "Criterion"
+diff --git a/include/system/traits.h b/include/system/traits.h
+index 36e8a6e..1e7eedd 100644
+--- a/include/system/traits.h
++++ b/include/system/traits.h
+@@ -125,7 +125,7 @@ template<> struct Traits<Thread>: public Traits<void>
+     static const bool trace_idle = hysterically_debugged;
+ };
+ 
+-template<> struct Traits<Scheduler<Thread, Traits<Build>::CPUS> >: public Traits<void>
++template<> struct Traits<Scheduler<Thread>>: public Traits<void>
+ {
+     static const bool debugged = Traits<Thread>::trace_idle || hysterically_debugged;
+ };
+diff --git a/include/system/types.h b/include/system/types.h
+index 3420645..5a07d67 100644
+--- a/include/system/types.h
++++ b/include/system/types.h
+@@ -84,7 +84,7 @@ class Application;
+ class Thread;
+ class Active;
+ 
+-template<typename, unsigned int> class Scheduler;
++template<typename> class Scheduler;
+ namespace Scheduling_Criteria
+ {
+     class Priority;
+diff --git a/include/thread.h b/include/thread.h
+index 1504c06..37e5426 100644
+--- a/include/thread.h
++++ b/include/thread.h
+@@ -100,8 +100,8 @@ protected:
+ 
+     Criterion & criterion() { return const_cast<Criterion &>(_link.rank()); }
+ 
+-    static void lock() { CPU::int_disable(); }
+-    static void unlock() { CPU::int_enable(); }
++    static void lock() { CPU::int_disable(); spin.acquire(); }
++    static void unlock() { spin.release(); CPU::int_enable(); }
+     static bool locked() { return CPU::int_disabled(); }
+ 
+     void suspend(bool locked);
+diff --git a/include/utility/ostream.h b/include/utility/ostream.h
+index eb5d5bb..d21b484 100644
+--- a/include/utility/ostream.h
++++ b/include/utility/ostream.h
+@@ -21,17 +21,19 @@ public:
+     struct Err {};
+ 
+ public:
+-    OStream(): _base(10), _error(false), _owner(-1) {}
++    OStream(): _base(10), _error(false), _lock(-1) {}
+ 
+     OStream & operator<<(const Begl & begl) {
+-        take();
+-        return *this << "[cpu=" << _owner << "]    ";
++        if(Traits<System>::multicore)
++            take();
++        return *this;
+     }
+     
+     OStream & operator<<(const Endl & endl) {
++        if(Traits<System>::multicore)
++            release();
+         print("\n");
+         _base = 10;
+-        release();
+         return *this;
+     }
+ 
+@@ -178,7 +180,7 @@ private:
+ private:
+     int _base;
+     volatile bool _error;
+-    volatile int _owner;
++    volatile int _lock;
+ 
+     static const char _digits[];
+ }; 
+@@ -196,4 +198,4 @@ __BEGIN_SYS
+ extern OStream kout, kerr;
+ __END_SYS
+ 
+-#endif
+\ No newline at end of file
++#endif
+diff --git a/src/abstraction/semaphore_test.cc b/src/abstraction/semaphore_test.cc
+index e4033f4..61005ed 100644
+--- a/src/abstraction/semaphore_test.cc
++++ b/src/abstraction/semaphore_test.cc
+@@ -6,6 +6,7 @@
+ #include <semaphore.h>
+ #include <alarm.h>
+ #include <display.h>
++#include <architecture/ia32/cpu.h>
+ 
+ using namespace EPOS;
+ 
+@@ -18,6 +19,13 @@ Semaphore * chopstick[5];
+ 
+ OStream cout;
+ 
++void countDelay(int delay_ms){
++    unsigned long iterations = delay_ms * (CPU::clock() / 1000);
++	for(int i; i < iterations; i++) {
++        asm("");
++	}
++}
++
+ int philosopher(int n, int l, int c)
+ {
+     int first = (n < 4)? n : 0;
+@@ -27,20 +35,20 @@ int philosopher(int n, int l, int c)
+ 
+         table.lock();
+         Display::position(l, c);
+-        cout << "thinking";
++        cout << "P"<< n << " is thinking on CPU# " << Machine::cpu_id() << endl;
+         table.unlock();
+ 
+-        Delay thinking(2000000);
++        countDelay(500);
+ 
+         chopstick[first]->p();   // get first chopstick
+         chopstick[second]->p();   // get second chopstick
+ 
+         table.lock();
+         Display::position(l, c);
+-        cout << " eating ";
++        cout << "P"<< n << " is eeeating on CPU# " << Machine::cpu_id() << endl;
+         table.unlock();
+ 
+-        Delay eating(1000000);
++        countDelay(500);
+ 
+         chopstick[first]->v();   // release first chopstick
+         chopstick[second]->v();   // release second chopstick
+@@ -48,7 +56,7 @@ int philosopher(int n, int l, int c)
+ 
+     table.lock();
+     Display::position(l, c);
+-    cout << "  done  ";
++    cout << "Philos#"<< n << " done  on CPU# " << Machine::cpu_id() << endl;
+     table.unlock();
+ 
+     return iterations;
+@@ -59,39 +67,39 @@ int main()
+     table.lock();
+     Display::clear();
+     Display::position(0, 0);
+-    cout << "The Philosopher's Dinner:" << endl;
++    cout << "The Philosopher's Dinner: on #" << Machine::cpu_id() << endl;
+ 
+     for(int i = 0; i < 5; i++)
+         chopstick[i] = new Semaphore;
+ 
+     phil[0] = new Thread(&philosopher, 0,  5, 32);
+-    phil[1] = new Thread(&philosopher, 1, 10, 44);
+-    phil[2] = new Thread(&philosopher, 2, 16, 39);
+-    phil[3] = new Thread(&philosopher, 3, 16, 24);
+-    phil[4] = new Thread(&philosopher, 4, 10, 20);
+-
+-    cout << "Philosophers are alive and hungry!" << endl;
+-
+-    Display::position(7, 44);
+-    cout << '/';
+-    Display::position(13, 44);
+-    cout << '\\';
+-    Display::position(16, 35);
+-    cout << '|';
+-    Display::position(13, 27);
+-    cout << '/';
+-    Display::position(7, 27);
+-    cout << '\\';
++    phil[1] = new Thread(&philosopher, 1, 10, 54);
++    phil[2] = new Thread(&philosopher, 2, 16, 49);
++    phil[3] = new Thread(&philosopher, 3, 16, 14);
++    phil[4] = new Thread(&philosopher, 4, 10, 10);
++
++    cout << "Philosophers are alive and angry! (on CPU# " << Machine::cpu_id() << endl;
++
++    Display::position(7, 54);
++    cout << '/' << endl;
++    Display::position(13, 54);
++    cout << '\\'<< endl;
++    Display::position(16, 45);
++    cout << '|'<< endl;
++    Display::position(13, 37);
++    cout << '/'<< endl;
++    Display::position(7, 37);
++    cout << '\\'<< endl;
+     Display::position(19, 0);
+ 
+-    cout << "The dinner is served ..." << endl;
++    cout << "The dinner is served ... on Table#" << Machine::cpu_id() << endl;
+     table.unlock();
+ 
+     for(int i = 0; i < 5; i++) {
+         int ret = phil[i]->join();
+         table.lock();
+         Display::position(20 + i, 0);
+-        cout << "Philosopher " << i << " ate " << ret << " times " << endl;
++        cout << "Philosopher " << i << " ate " << ret << " times (on #" << Machine::cpu_id() << ")" << endl;
+         table.unlock();
+     }
+ 
+@@ -100,7 +108,7 @@ int main()
+     for(int i = 0; i < 5; i++)
+         delete phil[i];
+ 
+-    cout << "The end!" << endl;
++    cout << "Dinner is Over! on Table#" << Machine::cpu_id() << endl;
+ 
+     return 0;
+ }
+diff --git a/src/abstraction/thread.cc b/src/abstraction/thread.cc
+index cf26a80..2e636c5 100644
+--- a/src/abstraction/thread.cc
++++ b/src/abstraction/thread.cc
+@@ -299,7 +299,12 @@ void Thread::reschedule()
+     assert(locked());
+ 
+     Thread * prev = running();
+-    Thread * next = _scheduler.choose();
++    Thread * next;
++	if(prev->priority() == IDLE){
++		next = _scheduler.choose_another();
++	}else{
++		next = _scheduler.choose();
++	}
+ 
+     dispatch(prev, next);
+ }
+@@ -329,10 +334,11 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
+         db<Thread>(INF) << "prev={" << prev << ",ctx=" << *prev->_context << "}" << endl;
+         db<Thread>(INF) << "next={" << next << ",ctx=" << *next->_context << "}" << endl;
+ 
++		spin.release();
+         CPU::switch_context(&prev->_context, next->_context);
+-    }
++    } else
++    	unlock();
+ 
+-    unlock();
+ }
+ 
+ 
+@@ -354,6 +360,7 @@ int Thread::idle()
+         db<Thread>(WRN) << "TREMBLE OVER OF THE IDLE POWER" << endl;
+         db<Thread>(WRN) << "Just kiddin" << endl;
+         db<Thread>(WRN) << "The last thread has exited!" << endl;
++
+         if(reboot) {
+             db<Thread>(WRN) << "Rebooting the machine ..." << endl;
+             Machine::reboot();
+diff --git a/src/init/init_first.cc b/src/init/init_first.cc
+index 785ed52..4d7c3a5 100644
+--- a/src/init/init_first.cc
++++ b/src/init/init_first.cc
+@@ -23,7 +23,7 @@ public:
+             CPU::int_enable();
+             return;
+         }
+-        CPU::int_disabled();
++        PC_Timer::disable();
+         Machine::smp_barrier();
+ 
+         Thread * first;
+@@ -42,14 +42,16 @@ public:
+         }
+         db<Init>(INF) << "done!" << endl;
+ 
+-        db<Init>(INF) << "INIT ends here!" << endl;
++        Machine::smp_barrier();
++        db<Init>(TRC) << "INIT ends here!" << endl;
+ 
+         db<Init, Thread>(INF) << "Dispatching the first thread: " << first << endl;
+ 
+         This_Thread::not_booting();
+ 
+         Machine::smp_barrier();
+-        CPU::int_enable();
++        Thread::_timer->reset();
++        PC_Timer::enable();
+ 
+         first->_context->load();
+     }
+diff --git a/src/init/init_system.cc b/src/init/init_system.cc
+index e78c81c..017285f 100644
+--- a/src/init/init_system.cc
++++ b/src/init/init_system.cc
+@@ -39,6 +39,8 @@ public:
+ 			Machine::init();
+ 			db<Init>(INF) << "done!" << endl;
+ 
++			Machine::smp_barrier();
++
+ 			// Initialize system abstractions
+ 			db<Init>(INF) << "Initializing system abstractions: " << endl;
+ 			System::init();
+@@ -55,10 +57,10 @@ public:
+ 				db<Init>(INF) << "done!" << endl;
+ 			}
+         }else {
+-        	 APIC_Timer::config(0, APIC_Timer::Count(-1), false, false);
++        	Machine::smp_barrier();
++        	Timer::init();
+         }
+ 
+-		Machine::smp_barrier();
+         // Initialization continues at init_first
+     }
+ };
+diff --git a/src/utility/ostream.cc b/src/utility/ostream.cc
+index f825dcb..4b4f86c 100644
+--- a/src/utility/ostream.cc
++++ b/src/utility/ostream.cc
+@@ -3,26 +3,37 @@
+ #include <utility/ostream.h>
+ #include <machine.h>
+ 
++extern "C" { void _panic(); }
++
+ __BEGIN_UTIL
+ 
+ const char OStream::_digits[] = "0123456789abcdef";
+ 
+ void OStream::take()
+ {
+-    // We cannot use Spin lock here
+-
+-    int me = Machine::cpu_id();
+-
+-    // Compare and exchange:
+-    // Atomically compare _owner and -1. If they're equal, replace _owner by 'me' and return the new value of '_owner'
+-    // Otherwise don't replace anything and return the current value of '_owner'
+-    while(CPU::cas(_owner, -1, me) != me);
++	static char tag[] = "<0>: ";
++
++	int me = Machine::cpu_id();
++	int last = CPU::cas(_lock, -1, me);
++	for(int i = 0, owner = last; (i < 10) && (owner != me); i++, owner = CPU::cas(_lock, -1, me));
++	if(last != me) {
++		tag[1] = '0' + Machine::cpu_id();
++		print(tag);
++	}
+ }
+ 
+ void OStream::release()
+ {
+-    // -1 means: no body 'owns' the output stream
+-    _owner = -1;
++    static char tag[] = " :<0>";
++
++    if(_lock != -1) {
++        tag[3] = '0' + Machine::cpu_id();
++        print(tag);
++
++        _lock = -1;
++    }
++    if(_error)
++        _panic();
+ }
+ 
+ int OStream::itoa(int v, char * s)
+@@ -113,4 +124,4 @@ int OStream::ptoa(const void * p, char * s)
+     return j + 2;
+ }    
+ 
+-__END_UTIL
+\ No newline at end of file
++__END_UTIL
