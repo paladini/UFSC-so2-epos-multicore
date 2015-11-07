@@ -303,7 +303,7 @@ void Thread::reschedule()
 	if(prev->priority() == IDLE){
 		next = _scheduler.choose_another();
 	}else{
-    Thread * next = _scheduler.choose();
+		next = _scheduler.choose();
 	}
 
     dispatch(prev, next);

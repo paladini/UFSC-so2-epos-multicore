@@ -84,7 +84,7 @@ class Application;
 class Thread;
 class Active;
 
-template<typename, unsigned int> class Scheduler;
+template<typename> class Scheduler;
 namespace Scheduling_Criteria
 {
     class Priority;
