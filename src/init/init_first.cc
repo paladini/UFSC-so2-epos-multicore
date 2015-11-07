@@ -23,7 +23,7 @@ public:
             CPU::int_enable();
             return;
         }
-        //CPU::int_disabled();
+        PC_Timer::disable();
         Machine::smp_barrier();
 
         Thread * first;
@@ -54,7 +54,8 @@ public:
         This_Thread::not_booting();
 
         Machine::smp_barrier();
-        //CPU::int_enable();
+        Thread::_timer->reset();
+        PC_Timer::enable();
 
         first->_context->load();
     }
