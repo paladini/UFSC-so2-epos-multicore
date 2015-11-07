@@ -314,7 +314,6 @@ void Thread::time_slicer(const IC::Interrupt_Id & i)
 {
     lock();
 
-    db<Thread>(TRC) << "Thread::time_slicer in cpu: " << Machine::cpu_id() << endl;
     reschedule();
 }
 
