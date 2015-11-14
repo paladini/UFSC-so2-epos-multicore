@@ -16,7 +16,7 @@ __BEGIN_SYS
 volatile unsigned int Thread::_thread_count;
 Scheduler_Timer * Thread::_timer;
 Scheduler<Thread> Thread::_scheduler;
-Spin Thread::spin;
+Spin Thread::_lock;
 
 // Methods
 void Thread::constructor_prolog(unsigned int stack_size)
@@ -46,7 +46,10 @@ void Thread::constructor_epilog(const Log_Addr & entry, unsigned int stack_size)
     if(preemptive && (_state == READY) && (_link.rank() != IDLE))
         reschedule();
     else
-        unlock();
+        if((_state == RUNNING) || (_link.rank() == IDLE)) // Keep interrupts disabled during init_first()
+            unlock(false);
+        else
+            unlock();
 }
 
 
@@ -299,12 +302,7 @@ void Thread::reschedule()
     assert(locked());
 
     Thread * prev = running();
-    Thread * next;
-	if(prev->priority() == IDLE){
-		next = _scheduler.choose_another();
-	}else{
-		next = _scheduler.choose();
-	}
+    Thread * next = _scheduler.choose();
 
     dispatch(prev, next);
 }
@@ -334,11 +332,18 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
         db<Thread>(INF) << "prev={" << prev << ",ctx=" << *prev->_context << "}" << endl;
         db<Thread>(INF) << "next={" << next << ",ctx=" << *next->_context << "}" << endl;
 
-		spin.release();
+        if(smp)
+            _lock.release(); // Note that releasing the lock here, even with interrupts disabled, allows for another CPU to select "prev".
+                             // The analysis of whether it could get scheduled by another CPU while its context is being saved by CPU::switch_context()
+                             // must focus on the time it takes to save a context and to reschedule a thread. If this gets stringent for a given architecture,
+                             // then unlocking must be moved into the mediator. For x86 and ARM it doesn't seam to be the case.
+
         CPU::switch_context(&prev->_context, next->_context);
     } else
-    	unlock();
+        if(smp)
+            _lock.release();
 
+    CPU::int_enable();
 }
 
 
@@ -360,7 +365,6 @@ int Thread::idle()
         db<Thread>(WRN) << "TREMBLE OVER OF THE IDLE POWER" << endl;
         db<Thread>(WRN) << "Just kiddin" << endl;
         db<Thread>(WRN) << "The last thread has exited!" << endl;
-
         if(reboot) {
             db<Thread>(WRN) << "Rebooting the machine ..." << endl;
             Machine::reboot();

@@ -92,15 +92,18 @@ public:
 private:
     void out_of_memory();
     Spin spin;
+    bool _heap_int_enabled;
 
     void acquire(){
-    	spin.acquire();
+    	_heap_int_enabled = CPU::int_enabled();
     	CPU::int_disable();
+    	spin.acquire();
     }
 
     void release(){
     	spin.release();
-    	CPU::int_enable();
+    	if(_heap_int_enabled)
+    		CPU::int_enable();
     }
 };
 

@@ -9,7 +9,7 @@ void PC_IC::init()
 {
     db<Init, IC>(TRC) << "IC::init()" << endl;
 
-    CPU::int_disable();
+    //CPU::int_disable();
 
     // Set all IDT entries to proper int_dispatch() offsets
     CPU::IDT_Entry * idt = reinterpret_cast<CPU::IDT_Entry *>(Memory_Map<PC>::IDT);
@@ -32,7 +32,7 @@ void PC_IC::init()
     remap();
     disable();
 
-    CPU::int_enable();
+    //CPU::int_enable();
 }
 
 __END_SYS

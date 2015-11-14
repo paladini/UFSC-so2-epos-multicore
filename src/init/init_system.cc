@@ -19,6 +19,7 @@ public:
         db<Init>(TRC) << "Init_System()" << endl;
 
 		if(Machine::cpu_id() == 0){
+			CPU::int_disable();
 
 			// Initialize the processor
 			db<Init>(INF) << "Initializing the CPU: " << endl;

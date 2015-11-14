@@ -24,6 +24,7 @@ class Thread
     friend class IA32;
 
 protected:
+    static const bool smp = Traits<Thread>::smp;
     static const bool preemptive = Traits<Thread>::Criterion::preemptive;
     static const bool reboot = Traits<System>::reboot;
 
@@ -100,8 +101,20 @@ protected:
 
     Criterion & criterion() { return const_cast<Criterion &>(_link.rank()); }
 
-    static void lock() { CPU::int_disable(); spin.acquire(); }
-    static void unlock() { spin.release(); CPU::int_enable(); }
+    static void lock(bool disable_int = true) {
+        if(disable_int)
+            CPU::int_disable();
+        if(smp)
+            _lock.acquire();
+    }
+
+    static void unlock(bool enable_int = true) {
+        if(smp)
+            _lock.release();
+        if(enable_int)
+            CPU::int_enable();
+    }
+    
     static bool locked() { return CPU::int_disabled(); }
 
     void suspend(bool locked);
@@ -131,7 +144,7 @@ protected:
     static volatile unsigned int _thread_count;
     static Scheduler_Timer * _timer;
     static Scheduler<Thread> _scheduler;
-    static Spin spin;
+    static Spin _lock;
 };
 
 

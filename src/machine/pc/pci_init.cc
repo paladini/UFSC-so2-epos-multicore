@@ -11,7 +11,7 @@ void PC_PCI::init()
 
     db<Init, PCI>(TRC) << "PCI::init(pmm.io_mem=" << _phy_io_mem << ")" << endl;
 
-    CPU::int_disable();
+    //CPU::int_disable();
 
     CPU::out8(0xcfb, 0x01);
     Reg32 tmp = CPU::in32(CONFADDR);
@@ -21,7 +21,7 @@ void PC_PCI::init()
     }
     CPU::out32(CONFADDR, tmp);
 
-    CPU::int_enable();
+    //CPU::int_enable();
 }
 
 __END_SYS

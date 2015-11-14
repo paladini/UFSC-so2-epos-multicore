@@ -23,7 +23,6 @@ public:
             CPU::int_enable();
             return;
         }
-        PC_Timer::disable();
         Machine::smp_barrier();
 
         Thread * first;
@@ -38,7 +37,7 @@ public:
 			// Idle thread creation must succeed main, thus avoiding implicit rescheduling
 			new (SYSTEM) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);
         }else{
-        	first = new (SYSTEM) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);
+        	first = new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::IDLE), &Thread::idle);
         }
         db<Init>(INF) << "done!" << endl;
 
@@ -50,8 +49,6 @@ public:
         This_Thread::not_booting();
 
         Machine::smp_barrier();
-        Thread::_timer->reset();
-        PC_Timer::enable();
 
         first->_context->load();
     }
