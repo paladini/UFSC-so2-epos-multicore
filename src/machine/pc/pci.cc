@@ -53,8 +53,8 @@ void PC_PCI::header(const PC_PCI::Locator & l, PC_PCI::Header * h)
         	}
             }
             h->cardbus_cis = cfg32(l.bus, l.dev_fn, CARDBUS_CIS);
-            h->subsystem_vendor_id =  cfg16(l.bus, l.dev_fn, SUBSYSTEM_VENDOR_ID);
-            h->subsystem_device_id =  cfg16(l.bus, l.dev_fn, SUBSYSTEM_DEVICE_ID);
+            h->subsystem_vendor_id = cfg16(l.bus, l.dev_fn, SUBSYSTEM_VENDOR_ID);
+            h->subsystem_device_id = cfg16(l.bus, l.dev_fn, SUBSYSTEM_DEVICE_ID);
             h->rom_address = cfg32(l.bus, l.dev_fn, ROM_ADDRESS);
             h->interrupt_line = cfg8(l.bus, l.dev_fn, INTERRUPT_LINE);
             h->interrupt_pin = cfg8(l.bus, l.dev_fn, INTERRUPT_PIN);
