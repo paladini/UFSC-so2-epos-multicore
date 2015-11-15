@@ -17,7 +17,7 @@ volatile unsigned int Thread::_thread_count;
 Scheduler_Timer * Thread::_timer;
 Scheduler<Thread> Thread::_scheduler;
 Spin Thread::_lock;
-Thread* Thread::toSuspend[Thread::Criterion::QUEUES];
+Thread::List Thread::toSuspend[Thread::Criterion::QUEUES];
 
 // Methods
 void Thread::constructor_prolog(unsigned int stack_size)
@@ -179,7 +179,7 @@ void Thread::suspend(bool locked)
 
 		dispatch(prev, next);
     } else {
-    	toSuspend[this->queue()] = this;
+    	toSuspend[this->queue()].insert(new (SYSTEM) List::Element(this));
     	IC::ipi_send(this->queue(), IC::INT_SUSPEND);
     	unlock();
     }
@@ -189,9 +189,10 @@ void Thread::suspend_handler(const IC::Interrupt_Id & i)
 {
 	lock();
 
-	Thread* prev = toSuspend[Machine::cpu_id()];
-	toSuspend[Machine::cpu_id()] = 0;
-	prev->suspend(true);
+	List::Element* e = toSuspend[Machine::cpu_id()].remove_head();
+	Thread* suspend = e->object();
+	delete e;
+	suspend->suspend(true);
 }
 
 

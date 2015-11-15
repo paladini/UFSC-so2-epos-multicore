@@ -70,6 +70,7 @@ public:
 
     // Thread Queue
     typedef Ordered_Queue<Thread, Criterion, Scheduler<Thread>::Element> Queue;
+    typedef Simple_List<Thread> List;
 
 public:
     template<typename ... Tn>
@@ -161,7 +162,7 @@ protected:
     static Scheduler_Timer * _timer;
     static Scheduler<Thread> _scheduler;
     static Spin _lock;
-    static Thread* toSuspend [];
+    static List toSuspend [];
 };
 
 
