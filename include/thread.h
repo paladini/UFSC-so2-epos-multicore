@@ -91,6 +91,16 @@ public:
     static void yield();
     static void exit(int status = 0);
 
+    static unsigned int schedule_queue(int priority) {
+		unsigned int queue;
+		if(priority == IDLE || priority == MAIN)
+			queue = Machine::cpu_id();
+		else
+			queue = _scheduler.queue_min_size();
+
+		return queue;
+    }
+
 protected:
     void constructor_prolog(unsigned int stack_size);
     void constructor_epilog(const Log_Addr & entry, unsigned int stack_size);

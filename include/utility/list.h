@@ -1205,6 +1205,20 @@ public:
     bool empty() const { return _list[R::current_queue()].empty(); }
 
     unsigned int size() const { return _list[R::current_queue()].size(); }
+
+    unsigned int queue_min_size() const {
+		unsigned int min = -1;
+		unsigned int queue = -1;
+
+		for(unsigned int i = 0; i < Q; i++)
+			if(min > _list[i].size()){
+				min = _list[i].size();
+				queue = i;
+			}
+
+		return queue;
+    }
+
     unsigned int total_size() const {
         unsigned int s = 0;
         for(unsigned int i = 0; i < Q; i++)

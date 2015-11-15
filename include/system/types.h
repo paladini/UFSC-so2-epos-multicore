@@ -90,6 +90,7 @@ namespace Scheduling_Criteria
     class Priority;
     class FCFS;
     class RR;
+    template<typename> class CpuAffinity;
 };
 
 class Address_Space;
