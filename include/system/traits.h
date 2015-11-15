@@ -28,7 +28,7 @@ template<> struct Traits<Build>
     enum {Legacy};
     static const unsigned int MODEL = Legacy;
 
-    static const unsigned int CPUS = 8;
+    static const unsigned int CPUS = 4;
     static const unsigned int NODES = 1; // > 1 => NETWORKING
 };
 
@@ -39,7 +39,7 @@ template<> struct Traits<Debug>
     static const bool error   = true;
     static const bool warning = true;
     static const bool info    = false;
-    static const bool trace   = true;
+    static const bool trace   = false;
 };
 
 template<> struct Traits<Lists>: public Traits<void>

@@ -19,6 +19,9 @@ void Thread::init()
 
     IC::int_vector(IC::INT_RESCHEDULER, reschedule_handler);
     IC::enable(IC::INT_RESCHEDULER);
+
+    IC::int_vector(IC::INT_SUSPEND, suspend_handler);
+    IC::enable(IC::INT_SUSPEND);
 }
 
 __END_SYS

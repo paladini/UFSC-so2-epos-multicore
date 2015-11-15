@@ -92,6 +92,8 @@ public:
     static void yield();
     static void exit(int status = 0);
 
+    unsigned int queue() { return link()->rank().queue(); }
+
     static unsigned int schedule_queue(int priority) {
 		unsigned int queue;
 		if(priority == IDLE || priority == MAIN)
@@ -144,6 +146,7 @@ protected:
 private:
     static void init();
     static void reschedule_handler(const IC::Interrupt_Id &);
+    static void suspend_handler(const IC::Interrupt_Id &);
     static void cutucao(Thread *);
 
 protected:
@@ -158,6 +161,7 @@ protected:
     static Scheduler_Timer * _timer;
     static Scheduler<Thread> _scheduler;
     static Spin _lock;
+    static Thread* toSuspend [];
 };
 
 

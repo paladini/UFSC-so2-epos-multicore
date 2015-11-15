@@ -17,6 +17,7 @@ volatile unsigned int Thread::_thread_count;
 Scheduler_Timer * Thread::_timer;
 Scheduler<Thread> Thread::_scheduler;
 Spin Thread::_lock;
+Thread* Thread::toSuspend[Thread::Criterion::QUEUES];
 
 // Methods
 void Thread::constructor_prolog(unsigned int stack_size)
@@ -147,16 +148,19 @@ void Thread::pass()
     db<Thread>(TRC) << "Thread::pass(this=" << this << ")" << endl;
 
     Thread * prev = running();
-    Thread * next = _scheduler.choose(this);
+    if(prev->queue() == this->queue()){
+		Thread * next = _scheduler.choose(this);
 
-    if(next)
-        dispatch(prev, next, false);
-    else {
-        db<Thread>(WRN) << "Thread::pass => thread (" << this << ") not ready!" << endl;
-        unlock();
+		if(next)
+			dispatch(prev, next, false);
+		else {
+			db<Thread>(WRN) << "Thread::pass => thread (" << this << ") not ready!" << endl;
+			unlock();
+		}
+    } else {
+    	unlock();
     }
 }
-
 
 void Thread::suspend(bool locked)
 {
@@ -166,13 +170,28 @@ void Thread::suspend(bool locked)
     db<Thread>(TRC) << "Thread::suspend(this=" << this << ")" << endl;
 
     Thread * prev = running();
+    if(prev->queue() == this->queue()){
+		//fudeu se this é de cpu diferente de running.
+		_scheduler.suspend(this);
+		_state = SUSPENDED;
 
-    _scheduler.suspend(this);
-    _state = SUSPENDED;
+		Thread * next = running();
 
-    Thread * next = running();
+		dispatch(prev, next);
+    } else {
+    	toSuspend[this->queue()] = this;
+    	IC::ipi_send(this->queue(), IC::INT_SUSPEND);
+    	unlock();
+    }
+}
 
-    dispatch(prev, next);
+void Thread::suspend_handler(const IC::Interrupt_Id & i)
+{
+	lock();
+
+	Thread* prev = toSuspend[Machine::cpu_id()];
+	toSuspend[Machine::cpu_id()] = 0;
+	prev->suspend(false);
 }
 
 
@@ -325,8 +344,8 @@ void Thread::reschedule_handler(const IC::Interrupt_Id & i)
 //Novembro Azul
 void Thread::cutucao(Thread * needy)
 {
-	_lock.release();
-	IC::ipi_send(needy->link()->rank().queue(), IC::INT_RESCHEDULER);
+	IC::ipi_send(needy->queue(), IC::INT_RESCHEDULER);
+	unlock();
 }
 
 void Thread::dispatch(Thread * prev, Thread * next, bool charge)
