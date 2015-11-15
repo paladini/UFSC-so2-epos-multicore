@@ -191,7 +191,7 @@ void Thread::suspend_handler(const IC::Interrupt_Id & i)
 
 	Thread* prev = toSuspend[Machine::cpu_id()];
 	toSuspend[Machine::cpu_id()] = 0;
-	prev->suspend(false);
+	prev->suspend(true);
 }
 
 
