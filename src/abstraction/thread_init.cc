@@ -16,6 +16,9 @@ void Thread::init()
     // neither by IDLE (which has a lower priority)
     if(Criterion::timed)
         _timer = new (SYSTEM) Scheduler_Timer(QUANTUM, time_slicer);
+
+    IC::int_vector(IC::INT_RESCHEDULER, reschedule_handler);
+    IC::enable(IC::INT_RESCHEDULER);
 }
 
 __END_SYS

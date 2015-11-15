@@ -44,7 +44,7 @@ void Thread::constructor_epilog(const Log_Addr & entry, unsigned int stack_size)
         _scheduler.suspend(this);
 
     if(preemptive && (_state == READY) && (_link.rank() != IDLE))
-        reschedule();
+        cutucao(this);
     else
         if((_state == RUNNING) || (_link.rank() == IDLE)) // Keep interrupts disabled during init_first()
             unlock(false);
@@ -113,7 +113,7 @@ void Thread::priority(const Priority & c)
     }
 
     if(preemptive) {
-        reschedule();
+        cutucao(this);
     }
 }
 
@@ -187,7 +187,7 @@ void Thread::resume()
         _scheduler.resume(this);
 
         if(preemptive)
-            reschedule();
+            cutucao(this);
     } else {
         db<Thread>(WRN) << "Resume called for unsuspended object!" << endl;
 
@@ -264,7 +264,7 @@ void Thread::wakeup(Queue * q)
         _scheduler.resume(t);
 
         if(preemptive)
-            reschedule();
+            cutucao(t);
     } else
         unlock();
 }
@@ -285,7 +285,7 @@ void Thread::wakeup_all(Queue * q)
             _scheduler.resume(t);
 
             if(preemptive) {
-                reschedule();
+                cutucao(t);
                 lock();
             }
          }
@@ -315,6 +315,19 @@ void Thread::time_slicer(const IC::Interrupt_Id & i)
     reschedule();
 }
 
+void Thread::reschedule_handler(const IC::Interrupt_Id & i)
+{
+	lock();
+
+ 	reschedule();
+}
+
+//Novembro Azul
+void Thread::cutucao(Thread * needy)
+{
+	_lock.release();
+	IC::ipi_send(needy->link()->rank().queue(), IC::INT_RESCHEDULER);
+}
 
 void Thread::dispatch(Thread * prev, Thread * next, bool charge)
 {

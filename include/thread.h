@@ -9,6 +9,7 @@
 #include <machine.h>
 #include <system.h>
 #include <scheduler.h>
+#include <ic.h>
 
 extern "C" { void __exit(); }
 
@@ -142,6 +143,8 @@ protected:
 
 private:
     static void init();
+    static void reschedule_handler(const IC::Interrupt_Id &);
+    static void cutucao(Thread *);
 
 protected:
     char * _stack;
