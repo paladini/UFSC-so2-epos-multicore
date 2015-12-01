@@ -19,11 +19,13 @@ Semaphore * chopstick[5];
 
 OStream cout;
 
+typedef Timer::Tick Count;
+
 void countDelay(int delay_ms){
     unsigned long iterations = delay_ms * (CPU::clock() / 1000);
-	for(int i; i < iterations; i++) {
+    for(int i; i < iterations; i++) {
         asm("");
-	}
+    }
 }
 
 int philosopher(int n, int l, int c)
@@ -43,7 +45,9 @@ int philosopher(int n, int l, int c)
         chopstick[second]->p();   // get second chopstick
 
         table.lock();
-        cout << "Philosopher # "<< n << " is eating on CPU# " << Machine::cpu_id() << endl;
+        cout << "Philosopher # "<< n << " is eating on CPU# " << Machine::cpu_id() <<
+            " | Run Media: " << phil[n]->stats.runtime_history_media() << 
+            " | Wait Media: " << phil[n]->stats.wait_history_media() << "\n" << endl;
         table.unlock();
 
         countDelay(100);
@@ -87,7 +91,6 @@ int main()
     }
 
     // Printing statistics (only a single CPU will print this)
-    typedef Timer::Tick Count;
     cout << "\n\n##############################" << endl;
     cout << "# Philosophers's Statistics: #" << endl;
     cout << "##############################\n" << endl;
@@ -138,13 +141,13 @@ int main()
         }
         Thread* idle = _chosen->object();
 
-        cout << "IDLE " << i << "  ";
-        for (int cpu_id = 0; cpu_id < Traits<Build>::CPUS; cpu_id++) {
-            Count ts_per_cpu = idle->runtime_at(cpu_id);
-            thread_runtime += ts_per_cpu;
-            cout << "| " << cpu_id << ": " << ts_per_cpu << "  ";
-        }
-        cout << "| T: " << thread_runtime << endl;
+        cout << "IDLE from CPU " << i << ": " << idle->runtime_at(i) << endl;
+        // for (int cpu_id = 0; cpu_id < Traits<Build>::CPUS; cpu_id++) {
+        //     Count ts_per_cpu = idle->runtime_at(cpu_id);
+        //     thread_runtime += ts_per_cpu;
+        //     cout << "| " << cpu_id << ": " << ts_per_cpu << "  ";
+        // }
+        // cout << "| T: " << thread_runtime << endl;
 
     }
 
@@ -165,22 +168,6 @@ int main()
         cout << "    Runtime history media: " << idle->stats.runtime_history_media() << endl;
         cout << "    Wait history media: " << idle->stats.wait_history_media() << "\n" << endl;
     }
-    // cout << "\nAccounting [wait, etc, etc.]" << endl;
-    // for (int i = 0; i < 4; i++) {
-    //     Thread::Queue::Element* _chosen = Thread::_scheduler._list[i].chosen();
-    //     while (_chosen->next()) {
-    //         if (_chosen->object()->_link.rank() == Thread::IDLE) {
-    //             break;
-    //         }
-    //         _chosen = _chosen->next();
-    //     }
-    //     Thread* idle = _chosen->object();
-    //     cout << "\n\nIdle from CPU " << i << ":" << endl;
-    //     cout << "Runtime media: " << (idle->stats.runtime_history_media()) << endl; 
-    //     cout << "Wait media: " << (idle->stats.wait_history_media()) << endl; 
-    //     cout << "Thread is IDLE? " << (idle->_link.rank() == Thread::IDLE) << endl;
-    // }
-    // cout << "\n\n" << endl;
 
     for(int i = 0; i < 5; i++)
         delete chopstick[i];

@@ -48,10 +48,10 @@ void Thread::constructor_epilog(const Log_Addr & entry, unsigned int stack_size)
     /* Don't care if IDLE thread was created right now, the priority will be normalized 
        within the time. 
     */
-     if (_state == RUNNING)
-         stats.runtime_cron_start();
-     else if (_state == READY)
-         stats.wait_cron_start();
+    if (_state == RUNNING)
+        stats.runtime_cron_start();
+    else if (_state == READY)
+        stats.wait_cron_start();
 
     if(preemptive && (_state == READY) && (_link.rank() != IDLE))
         cutucao(this);
