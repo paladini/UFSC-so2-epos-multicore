@@ -964,6 +964,113 @@ public:
     }
 };
 
+// Doubly-Linked, Ordered List
+template<typename T,
+          typename R = List_Element_Rank,
+          typename El = List_Elements::Doubly_Linked_Ordered<T, R>>
+class Relative_But_Idle: public List<T, El>
+{
+private:
+    typedef List<T, El> Base;
+
+public:
+    typedef T Object_Type;
+    typedef R Rank_Type;
+    typedef El Element;
+    typedef List_Iterators::Bidirecional<El> Iterator;
+
+public:
+    using Base::empty;
+    using Base::size;
+    using Base::head;
+    using Base::tail;
+    using Base::begin;
+    using Base::end;
+    using Base::insert_first;
+    using Base::insert_head;
+    using Base::insert_tail;
+    using Base::search;
+
+    void insert(Element * e) {
+        db<Lists>(TRC) << "Ordered_List::insert(e=" << e
+                       << ") => {p=" << (e ? e->prev() : (void *) -1)
+                       << ",o=" << (e ? e->object() : (void *) -1)
+                       << ",n=" << (e ? e->next() : (void *) -1)
+                       << "}" << endl;
+
+        if(empty())
+            insert_first(e);
+        else {
+            Element * next;
+            bool not_idle = e->rank() != R::IDLE;
+            for(next = head();
+                (next->rank() <= e->rank()) && next->next();
+                next = next->next())
+                if(not_idle)
+                    e->rank(Rank_Type(e->rank() - next->rank(), e->rank().queue()));
+
+            if(next->rank() <= e->rank()) {
+                if(not_idle)
+                    e->rank(Rank_Type(e->rank() - next->rank(), e->rank().queue()));
+                insert_tail(e);
+            } else if(!next->prev()) {
+                if(next->rank() != R::IDLE)
+                    next->rank(Rank_Type(next->rank() - e->rank(), e->rank().queue()));
+                insert_head(e);
+            } else {
+                if(next->rank() != R::IDLE)
+                    next->rank(Rank_Type(next->rank() - e->rank(), e->rank().queue()));
+                Base::insert(e, next->prev(), next);
+            }
+        }
+    }
+
+    Element * remove() {
+        db<Lists>(TRC) << "Ordered_List::remove()" << endl;
+
+        return Base::remove_head();
+    }
+
+    Element * remove(Element * e) {
+        db<Lists>(TRC) << "Ordered_List::remove(e=" << e
+                       << ") => {p=" << (e ? e->prev() : (void *) -1)
+                       << ",o=" << (e ? e->object() : (void *) -1)
+                       << ",n=" << (e ? e->next() : (void *) -1)
+                       << "}" << endl;
+
+        Base::remove(e);
+        if(e->next() && e->next()->rank() != R::IDLE)
+            e->next()->rank(Rank_Type(e->next()->rank() + e->rank(), e->rank().queue()));
+
+        return e;
+    }
+
+    Element * remove(const Object_Type * obj) {
+        db<Lists>(TRC) << "Ordered_List::remove(o=" << obj << ")" << endl;
+
+        Element * e = search(obj);
+        if(e)
+            return remove(e);
+        else
+            return 0;
+    }
+
+    Element * search_rank(const Rank_Type & rank) {
+        Element * e = head();
+        for(; e && (e->rank() != rank); e = e->next());
+        return e;
+    }
+
+    Element * remove_rank(const Rank_Type & rank) {
+        db<Lists>(TRC) << "Ordered_List::remove_rank(r=" << rank << ")" << endl;
+
+        Element * e = search_rank(rank);
+        if(e)
+            return remove(e);
+        return 0;
+    }
+};
+
 
 // Doubly-Linked, Relative Ordered List
 template<typename T,
@@ -980,10 +1087,10 @@ class Relative_List: public Ordered_List<T, R, El, true> {};
 template<typename T,
           typename R = typename T::Criterion,
           typename El = List_Elements::Doubly_Linked_Scheduling<T, R> >
-class Scheduling_List: private Relative_List<T, R, El>
+class Scheduling_List: private Relative_But_Idle<T, R, El>
 {
 private:
-    typedef Relative_List<T, R, El> Base;
+    typedef Relative_But_Idle<T, R, El> Base;
 
 public:
     typedef T Object_Type;

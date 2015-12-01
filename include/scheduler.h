@@ -128,11 +128,15 @@ namespace Scheduling_Criteria
 				_queue = T::schedule_queue();
 		}
 
-		CFSAffinity(int p, unsigned int queue): Priority(((1.0 / p) * (IDLE - 2)) + 1 ) {
+		CFSAffinity(int p, const unsigned int queue): Priority(p) {
 			_queue = queue;
 		}
 
 		static unsigned int current_queue() { return Machine::cpu_id(); }
+
+		static unsigned int calculate_priority(unsigned long long value) {
+			return ((1.0 / value) * (IDLE - 600000000)) + 1;
+		}
 
 		const unsigned int queue() const { return _queue; }
 	};

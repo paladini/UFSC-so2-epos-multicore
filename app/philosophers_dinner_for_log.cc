@@ -10,7 +10,7 @@
 
 using namespace EPOS;
 
-const int iterations = 3;
+const int iterations = 35;
 
 Mutex table;
 
@@ -45,9 +45,7 @@ int philosopher(int n, int l, int c)
         chopstick[second]->p();   // get second chopstick
 
         table.lock();
-        cout << "Philosopher # "<< n << " is eating on CPU# " << Machine::cpu_id() <<
-            " | Run Media: " << phil[n]->stats.runtime_history_media() << 
-            " | Wait Media: " << phil[n]->stats.wait_history_media() << "\n" << endl;
+        cout << "Philosopher # "<< n << " is eating on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
         countDelay(100);

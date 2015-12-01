@@ -26,6 +26,19 @@ void Thread::constructor_prolog(unsigned int stack_size)
     lock();
 
     _thread_count++;
+    if(this->criterion() != IDLE) {
+//    	if(_scheduler.size() >= 1){
+//			Count aux = 0;
+//			if(running()->criterion() == IDLE) {
+//				aux = _scheduler.head()->object()->stats.wait_history_media();
+//			} else {
+//				aux = running()->stats.wait_history_media();
+//			}
+//			_link.rank(Criterion(Criterion::calculate_priority(aux), this->queue()));
+//    	} else {
+			_link.rank(Criterion(100, this->queue()));
+//    	}
+    }
     _scheduler.insert(this);
 
     _stack = new (SYSTEM) char[stack_size];
@@ -281,6 +294,8 @@ void Thread::sleep(Queue * q)
     q->insert(&prev->_link);
     prev->_waiting = q;
 
+   // db<Thread>(TRC) << "" << endl;
+
     dispatch(prev, _scheduler.chosen());
 }
 
@@ -385,13 +400,13 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
 
         next->stats.wait_cron_stop();
         if(next->criterion() != IDLE) {
-        	next->link()->rank(Criterion(next->stats.wait_history_media(), next->queue()));
+        	Count p = next->stats.wait_history_media();
+        	unsigned int aux = Criterion::calculate_priority(p);
+        	db<Thread>(TRC) << "Thread::dispatch: " << aux << endl;
+        	next->link()->rank(Criterion(aux, next->queue()));
         }
 
         next->stats.runtime_cron_start();
-
-        db<Thread>(TRC) << "[prev!=next] TID: " << prev << " | Wait Media: " << prev->stats.wait_history_media() << " | Runtime Media: " <<
-            prev->stats.runtime_history_media() << " | State: " << prev->_state << endl;
 
         if(smp)
             _lock.release();
@@ -413,35 +428,40 @@ void Thread::rebalance_handler(const IC::Interrupt_Id & i)
 	 }
 
 	 Count my_idle = _scheduler.get_idle()->stats.runtime_history_media();
-	 Count max = 0;
+	 db<Thread>(TRC) << "re start fiuq: " << _scheduler.get_idle()->criterion() << endl;
+	 Count max_idle = 0;
 	 unsigned int queue = 0;
 	 for(unsigned int i = 0; i < Criterion::QUEUES; i++){
 	 	if(Machine::cpu_id() != i){
 	 		Count aux = _scheduler.get_idle(i)->stats.runtime_history_media();
-	 		if(aux > max){
-	 			max = aux;
+	 		db<Thread>(TRC) << "re start fiuq2: " << _scheduler.get_idle(i) << " c: " << _scheduler.get_idle(i)->criterion() << endl;
+	 		if(aux > max_idle){
+	 			max_idle = aux;
 	 			queue = i;
 	 		}
 	 	}
 	 }
+	 db<Thread>(TRC) << "re start fiuq 2" << endl;
 
-	 //maior distancia entre my_idle e max menor a porcentagem
-	 if((double)my_idle / (double)max <= 0.5){
+	 //maior distancia entre my_idle e max_idle menor a porcentagem
+	 if((double)my_idle / ((double)max_idle + 1) <= 0.75){
 	 	S_Element* aux = _scheduler.head();
 	 	Thread* chosen = 0;
-	 	max = 0;
+	 	Count max = 0;
 	 	do{
 	 		Count temp = aux->object()->stats.wait_history_media();
-	 		if(aux->object()->criterion() != IDLE && temp > max){
+	 		if(aux->object()->criterion() != IDLE && temp >= max){
 				chosen = aux->object();
 				max = temp;
 	 		}
 	 		aux = aux->next();
 	 	}while(!aux);
 
-	 	chosen->link()->rank(Criterion(max, queue));
+	 	db<Thread>(TRC) << "re: q " << chosen->queue() << endl;
+	 	_scheduler.remove(chosen);
+	 	chosen->link()->rank(Criterion(Criterion::calculate_priority(max) , queue));
 	 	_scheduler.insert(chosen);
-		db<void>(TRC) << "re running: " << running() << " prev: " << chosen << " q: " << Machine::cpu_id() << " nq: " << chosen->queue() << endl;
+		db<Thread>(TRC) << "re running: " << running() << " prev: " << chosen << " cri: " << chosen->criterion() << " q: " << Machine::cpu_id() << " nq: " << chosen->queue() << endl;
 	 }
 	 unlock();
 }
