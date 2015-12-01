@@ -28,7 +28,8 @@ public:
     void stop() { lap(); }
 
     Microsecond read() { return ticks() * 1000000 / frequency(); }
-
+    Time_Stamp read_ticks() { return ticks(); } 
+    
 private:
     Time_Stamp ticks() {
         if(_start == 0)

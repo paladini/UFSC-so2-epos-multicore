@@ -10,7 +10,7 @@
 
 using namespace EPOS;
 
-const int iterations = 10;
+const int iterations = 3;
 
 Mutex table;
 
@@ -37,7 +37,7 @@ int philosopher(int n, int l, int c)
         cout << "Philosopher # "<< n << " is thinking on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
-        countDelay(500);
+        countDelay(100);
 
         chopstick[first]->p();   // get first chopstick
         chopstick[second]->p();   // get second chopstick
@@ -46,7 +46,7 @@ int philosopher(int n, int l, int c)
         cout << "Philosopher # "<< n << " is eating on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
-        countDelay(500);
+        countDelay(100);
 
         chopstick[first]->v();   // release first chopstick
         chopstick[second]->v();   // release second chopstick
@@ -75,8 +75,7 @@ int main()
     phil[3] = new Thread(&philosopher, 3, 16, 24);
     phil[4] = new Thread(&philosopher, 4, 10, 20);
 
-    cout << "Philosophers are alive and angry! (on CPU# " << Machine::cpu_id() << endl;
-
+    cout << "Philosophers are alive and angry! (on CPU# " << Machine::cpu_id() << ")" << endl;
     cout << "The dinner is served ... on Table#" << Machine::cpu_id() << endl;
     table.unlock();
 
@@ -87,12 +86,108 @@ int main()
         table.unlock();
     }
 
+    // Printing statistics (only a single CPU will print this)
+    typedef Timer::Tick Count;
+    cout << "\n\n##############################" << endl;
+    cout << "# Philosophers's Statistics: #" << endl;
+    cout << "##############################\n" << endl;
+
+    // Runtime of each philosopher.
+    cout << "[ Runtime of each philosopher ]" << endl;
+    for (int i = 0; i < 5; i++) {
+        Count thread_runtime = 0;
+
+        cout << "Philosopher " << i << "  ";
+        for (int cpu_id = 0; cpu_id < Traits<Build>::CPUS; cpu_id++) {
+            Count ts_per_cpu = phil[i]->runtime_at(cpu_id);
+            thread_runtime += ts_per_cpu;
+            cout << "| " << cpu_id << ": " << ts_per_cpu << "  ";
+        }
+        cout << "| T: " << thread_runtime << endl;
+        
+    }
+
+    // Data not very useful.
+    cout << "\n[ Misc. Data ]" << endl;
+    for (int i = 0; i < 5; i++) {
+        Count thread_runtime = 0;
+
+        cout << "Philosopher " << i << ":" << endl;
+        cout << "    Runtime history media: " << phil[i]->stats.runtime_history_media() << endl;
+        cout << "    Wait history media: " << phil[i]->stats.wait_history_media() << "\n" << endl;
+        
+    }
+
+    // IDLEs
+    cout << "######################" << endl;
+    cout << "# IDLE's Statistics: #" << endl;
+    cout << "######################\n" << endl;
+
+    // Runtime of each philosopher.
+    cout << "[ Runtime of each IDLE ]" << endl;
+    for (int i = 0; i < Traits<Build>::CPUS; i++) {
+
+        Count thread_runtime = 0;
+
+        Thread::Queue::Element* _chosen = Thread::_scheduler._list[i].chosen();
+        while (_chosen->next()) {
+            if (_chosen->object()->_link.rank() == Thread::IDLE) {
+                break;
+            }
+            _chosen = _chosen->next();
+        }
+        Thread* idle = _chosen->object();
+
+        cout << "IDLE " << i << "  ";
+        for (int cpu_id = 0; cpu_id < Traits<Build>::CPUS; cpu_id++) {
+            Count ts_per_cpu = idle->runtime_at(cpu_id);
+            thread_runtime += ts_per_cpu;
+            cout << "| " << cpu_id << ": " << ts_per_cpu << "  ";
+        }
+        cout << "| T: " << thread_runtime << endl;
+
+    }
+
+    // Data not very useful.
+    cout << "\n[ Misc. Data ]" << endl;
+    for (int i = 0; i < Traits<Build>::CPUS; i++) {
+        
+        Thread::Queue::Element* _chosen = Thread::_scheduler._list[i].chosen();
+        while (_chosen->next()) {
+            if (_chosen->object()->_link.rank() == Thread::IDLE) {
+                break;
+            }
+            _chosen = _chosen->next();
+        }
+        Thread* idle = _chosen->object();
+
+        cout << "IDLE " << i << ":" << endl;
+        cout << "    Runtime history media: " << idle->stats.runtime_history_media() << endl;
+        cout << "    Wait history media: " << idle->stats.wait_history_media() << "\n" << endl;
+    }
+    // cout << "\nAccounting [wait, etc, etc.]" << endl;
+    // for (int i = 0; i < 4; i++) {
+    //     Thread::Queue::Element* _chosen = Thread::_scheduler._list[i].chosen();
+    //     while (_chosen->next()) {
+    //         if (_chosen->object()->_link.rank() == Thread::IDLE) {
+    //             break;
+    //         }
+    //         _chosen = _chosen->next();
+    //     }
+    //     Thread* idle = _chosen->object();
+    //     cout << "\n\nIdle from CPU " << i << ":" << endl;
+    //     cout << "Runtime media: " << (idle->stats.runtime_history_media()) << endl; 
+    //     cout << "Wait media: " << (idle->stats.wait_history_media()) << endl; 
+    //     cout << "Thread is IDLE? " << (idle->_link.rank() == Thread::IDLE) << endl;
+    // }
+    // cout << "\n\n" << endl;
+
     for(int i = 0; i < 5; i++)
         delete chopstick[i];
     for(int i = 0; i < 5; i++)
         delete phil[i];
 
-    cout << "Dinna is Ova! on Table#" << Machine::cpu_id() << endl;
+    cout << "Dinna is Ova! on Table#" << Machine::cpu_id() << "\n" << endl;
 
     return 0;
 }

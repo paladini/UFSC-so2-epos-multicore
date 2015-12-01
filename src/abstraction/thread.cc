@@ -44,6 +44,14 @@ void Thread::constructor_epilog(const Log_Addr & entry, unsigned int stack_size)
     if((_state != READY) && (_state != RUNNING))
         _scheduler.suspend(this);
 
+    /* Don't care if IDLE thread was created right now, the priority will be normalized 
+       within the time. 
+    */
+    // if (_state == RUNNING)
+    //     stats.runtime_cron_start();
+    // else if (_state == READY)
+    //     stats.wait_cron_start();
+
     if(preemptive && (_state == READY) && (_link.rank() != IDLE))
         cutucao(this);
     else
@@ -90,6 +98,12 @@ Thread::~Thread()
     case FINISHING: // Already called exit()
         break;
     }
+
+    if (stats.runtime_cron_running())
+        stats.runtime_cron_stop();
+    
+    if (stats.wait_cron_running())
+        stats.wait_cron_stop();
 
     if(_joining)
         _joining->resume();
@@ -362,14 +376,22 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
         next->_state = RUNNING;
 
         db<Thread>(TRC) << "Thread::dispatch(prev=" << prev << ",next=" << next << ")" << endl;
-        db<Thread>(INF) << "prev={" << prev << ",ctx=" << *prev->_context << "}" << endl;
-        db<Thread>(INF) << "next={" << next << ",ctx=" << *next->_context << "}" << endl;
+
+        // Accounting the waiting time.
+        next->stats.wait_cron_stop();
+        prev->stats.wait_cron_start();
+
+        // Accounting the runtime.
+        prev->stats.runtime_cron_stop();
+        // statistics only
+        prev->stats.last_runtime(prev->stats.runtime_cron_ticks()); // updating last_runtime + total_runtime
+        next->stats.runtime_cron_start();
+
+        // db<Thread>(TRC) << "[prev!=next] TID: " << prev << " | Wait Media: " << prev->stats.wait_history_media() << " | Runtime Media: " << 
+            // prev->stats.runtime_history_media() << " | State: " << prev->_state << endl;
 
         if(smp)
-            _lock.release(); // Note that releasing the lock here, even with interrupts disabled, allows for another CPU to select "prev".
-                             // The analysis of whether it could get scheduled by another CPU while its context is being saved by CPU::switch_context()
-                             // must focus on the time it takes to save a context and to reschedule a thread. If this gets stringent for a given architecture,
-                             // then unlocking must be moved into the mediator. For x86 and ARM it doesn't seam to be the case.
+            _lock.release();
 
         CPU::switch_context(&prev->_context, next->_context);
     } else

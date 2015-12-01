@@ -1210,12 +1210,13 @@ public:
 		unsigned int min = -1;
 		unsigned int queue = -1;
 
-		for(unsigned int i = 0; i < Q; i++)
+		for(unsigned int i = 0; i < Q; i++) {
 			if(min > _list[i].size()){
 				min = _list[i].size();
 				queue = i;
 			}
-
+        }
+        
 		return queue;
     }
 
@@ -1256,7 +1257,7 @@ public:
         return _list[e->rank().queue()].choose(e);
     }
 
-private:
+public: // CHANGE TO PRIVATE BEFORE SENDING THE WORK TO MOODLE.
     L _list[Q];
 };
 

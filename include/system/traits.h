@@ -10,7 +10,7 @@ template<typename T>
 struct Traits
 {
     static const bool enabled = true;
-    static const bool debugged = true;
+    static const bool debugged = false;
     static const bool hysterically_debugged = false;
 };
 
@@ -39,7 +39,7 @@ template<> struct Traits<Debug>
     static const bool error   = true;
     static const bool warning = true;
     static const bool info    = false;
-    static const bool trace   = false;
+    static const bool trace   = true;
 };
 
 template<> struct Traits<Lists>: public Traits<void>
@@ -121,6 +121,7 @@ template<> struct Traits<Thread>: public Traits<void>
 
     typedef Scheduling_Criteria::CpuAffinity<Thread> Criterion;
     static const unsigned int QUANTUM = 10000; // us
+    static const unsigned int ACCOUNTING_MAX_HISTORY = 3;
 
     static const bool trace_idle = hysterically_debugged;
 };

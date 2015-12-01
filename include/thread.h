@@ -10,6 +10,7 @@
 #include <system.h>
 #include <scheduler.h>
 #include <ic.h>
+#include <accounting.h>
 
 extern "C" { void __exit(); }
 
@@ -71,6 +72,7 @@ public:
     // Thread Queue
     typedef Ordered_Queue<Thread, Criterion, Scheduler<Thread>::Element> Queue;
     typedef Simple_List<Thread> List;
+    typedef TSC::Time_Stamp Count;
 
 public:
     template<typename ... Tn>
@@ -104,6 +106,8 @@ public:
 
 		return queue;
     }
+
+    Count runtime_at(int cpu_id) { return stats.total_runtime_at(cpu_id); }
 
 protected:
     void constructor_prolog(unsigned int stack_size);
@@ -156,13 +160,18 @@ protected:
     volatile State _state;
     Queue * _waiting;
     Thread * volatile _joining;
-    Queue::Element _link;
 
     static volatile unsigned int _thread_count;
     static Scheduler_Timer * _timer;
-    static Scheduler<Thread> _scheduler;
     static Spin _lock;
     static List toSuspend [];
+
+public:
+    // Accounting
+    Accounting<Count> stats;
+
+    Queue::Element _link;
+    static Scheduler<Thread> _scheduler;
 };
 
 
