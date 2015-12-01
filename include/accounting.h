@@ -24,8 +24,12 @@ public:
 	Accounting() {
 		_last_runtime = 0;
 		_created_at = Machine::cpu_id();
+		
 		_wait_cron_running = false;
+		_wait_history_pointer = 0;
+
 		_runtime_cron_running = false;
+		_runtime_history_pointer = 0;
 
 		for(unsigned int i = 0; i < Traits<Build>::CPUS; i++) {
 			_total_runtime[i] = 0;
@@ -61,11 +65,9 @@ public:
 	void wait_cron_stop() { 
 		_wait_cron.stop(); 
 		_wait_cron_running = false;
-		T my_value = _wait_cron.read_ticks();
-		_wait_history.insert_head(new (SYSTEM) Element(&my_value));
-		if(_wait_history.size() >= MAX_HISTORY){
-			_wait_history.remove_tail();
-		}
+		unsigned int position = (_wait_history_pointer < MAX_HISTORY) ? _wait_history_pointer : _wait_history_pointer % MAX_HISTORY; 
+		_wait_history[position] = wait_cron_ticks();
+		_wait_history_pointer++;
 	}
 
 	void runtime_cron_start() { 
@@ -77,11 +79,9 @@ public:
 	void runtime_cron_stop() { 
 		_runtime_cron.stop(); 
 		_runtime_cron_running = false;
-		T my_value = _runtime_cron.read_ticks();
-		_runtime_history.insert_head(new (SYSTEM) Element(&my_value));
-		if(_runtime_history.size() >= MAX_HISTORY){
-			_runtime_history.remove_tail();
-		}
+		unsigned int position = (_runtime_history_pointer < MAX_HISTORY) ? _runtime_history_pointer : _runtime_history_pointer % MAX_HISTORY; 
+		_runtime_history[position] = runtime_cron_ticks();
+		_runtime_history_pointer++;
 	}
 	
 	bool wait_cron_running() { 
@@ -93,11 +93,11 @@ public:
 	}
 	
 	T wait_cron_ticks() { 
-		return _wait_cron.read_ticks(); 
+		return _wait_cron.read(); 
 	}
 
 	T runtime_cron_ticks() {
-		return _runtime_cron.read_ticks();
+		return _runtime_cron.read();
 	}
 
 	// Wait-time history
@@ -107,12 +107,11 @@ public:
 
 	T wait_history_media(){
 		T media = 0;
-		Element* e = _wait_history.head();
-		while(e->next()) {
-			media += *e->object();
-			e = e->next();
+		unsigned int length = (_wait_history_pointer < MAX_HISTORY) ? _wait_history_pointer : MAX_HISTORY; 
+		for (int i = 0; i < length; i++) {
+			media += _wait_history[i];
 		}
-		return media / _wait_history.size();
+		return media / length;
 	}
 
 	// Runtime history
@@ -126,21 +125,21 @@ public:
 
 	T runtime_history_media() {
 		T media = 0;
-		Element* e = _runtime_history.head();
-		while(e->next()) {
-			media += *e->object();
-			e = e->next();
+		unsigned int length = (_runtime_history_pointer < MAX_HISTORY) ? _runtime_history_pointer : MAX_HISTORY; 
+		for (int i = 0; i < length; i++) {
+			media += _runtime_history[i];
 		}
-		return media / _runtime_history.size();
+		return media / length;
 	}	
 
-public: // MUDAR PARA PRIVATE
+public:
 	T _last_runtime;
 	T _total_runtime[Traits<Build>::CPUS];
+	T _wait_history[MAX_HISTORY];
+	T _runtime_history[MAX_HISTORY];
 	
-	// Account the history of waits and runs (account only MAX_HISTORY data)
-	List _wait_history;
-	List _runtime_history;
+	unsigned int _wait_history_pointer;
+	unsigned int _runtime_history_pointer;
 
 	Chronometer _wait_cron;
 	Chronometer _runtime_cron;

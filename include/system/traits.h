@@ -121,7 +121,7 @@ template<> struct Traits<Thread>: public Traits<void>
 
     typedef Scheduling_Criteria::CpuAffinity<Thread> Criterion;
     static const unsigned int QUANTUM = 10000; // us
-    static const unsigned int ACCOUNTING_MAX_HISTORY = 3;
+    static const unsigned int ACCOUNTING_MAX_HISTORY = 5;
 
     static const bool trace_idle = hysterically_debugged;
 };
