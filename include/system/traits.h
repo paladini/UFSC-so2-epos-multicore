@@ -119,7 +119,7 @@ template<> struct Traits<Thread>: public Traits<void>
 {
     static const bool smp = Traits<System>::multicore;
 
-    typedef Scheduling_Criteria::CpuAffinity<Thread> Criterion;
+    typedef Scheduling_Criteria::CFSAffinity<Thread> Criterion;
     static const unsigned int QUANTUM = 100000; // us
     static const unsigned int ACCOUNTING_MAX_HISTORY = 3;
     static const unsigned int REBALANCER_QUANTUM = QUANTUM * 5;

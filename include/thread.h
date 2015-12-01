@@ -31,6 +31,7 @@ protected:
     static const bool reboot = Traits<System>::reboot;
 
     static const unsigned int QUANTUM = Traits<Thread>::QUANTUM;
+    static const unsigned int REBALANCER_QUANTUM = Traits<Thread>::REBALANCER_QUANTUM;
     static const unsigned int STACK_SIZE = Traits<Application>::STACK_SIZE;
 
     typedef CPU::Log_Addr Log_Addr;
@@ -71,6 +72,7 @@ public:
 
     // Thread Queue
     typedef Ordered_Queue<Thread, Criterion, Scheduler<Thread>::Element> Queue;
+    typedef Scheduler<Thread>::Element S_Element;
     typedef Simple_List<Thread> List;
     typedef TSC::Time_Stamp Count;
 
@@ -97,7 +99,7 @@ public:
 
     unsigned int queue() { return link()->rank().queue(); }
 
-    static unsigned int schedule_queue(int priority) {
+    static unsigned int schedule_queue() {
 		return _scheduler.queue_min_size();
     }
 

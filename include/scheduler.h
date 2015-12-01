@@ -232,7 +232,7 @@ public:
 		unsigned int min = -1;
 		unsigned int queue = -1;
 
-		for(unsigned int i = 0; i < Q; i++) {
+		for(unsigned int i = 0; i < Criterion::QUEUES; i++) {
 			if(min > Base::_list[i].size()){
 				min = Base::_list[i].size();
 				queue = i;

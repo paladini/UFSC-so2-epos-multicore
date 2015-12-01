@@ -431,7 +431,7 @@ void Thread::rebalance_handler(const IC::Interrupt_Id & i)
 	 	Thread* chosen = 0;
 	 	max = 0;
 	 	do{
-	 		Count temp = aux->object()->wait_history_media();
+	 		Count temp = aux->object()->stats.wait_history_media();
 	 		if(aux->object()->criterion() != IDLE && temp > max){
 				chosen = aux->object();
 				max = temp;
@@ -441,8 +441,8 @@ void Thread::rebalance_handler(const IC::Interrupt_Id & i)
 
 	 	chosen->link()->rank(Criterion(max, queue));
 	 	_scheduler.insert(chosen);
+		db<void>(TRC) << "re running: " << running() << " prev: " << chosen << " q: " << Machine::cpu_id() << " nq: " << chosen->queue() << endl;
 	 }
-	 db<void>(TRC) << "re running: " << running() << " prev: " << prev << " q: " << prev->queue() << " nq: " << chosen_list << endl;
 	 unlock();
 }
 

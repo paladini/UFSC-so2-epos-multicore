@@ -983,7 +983,7 @@ template<typename T,
 class Scheduling_List: private Relative_List<T, R, El>
 {
 private:
-    typedef Ordered_List<T, R, El> Base;
+    typedef Relative_List<T, R, El> Base;
 
 public:
     typedef T Object_Type;
