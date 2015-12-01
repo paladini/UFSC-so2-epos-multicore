@@ -103,6 +103,39 @@ namespace Scheduling_Criteria
 
 		const unsigned int queue() const { return _queue; }
 	};
+
+    template<typename T>
+    class CFSAffinity: public Priority
+	{
+	public:
+		enum {
+			MAIN   = 0,
+			NORMAL = 1,
+			IDLE   = (unsigned(1) << (sizeof(int) * 8 - 1)) - 1
+		};
+
+		static const bool timed = true;
+		static const bool dynamic = false;
+		static const bool preemptive = true;
+		static const unsigned int QUEUES = Traits<Machine>::CPUS;
+		unsigned int _queue;
+
+	public:
+		CFSAffinity(int p = NORMAL): Priority(p) {
+			if(_priority == IDLE || _priority == MAIN)
+				_queue = Machine::cpu_id();
+			else
+				_queue = T::schedule_queue();
+		}
+
+		CFSAffinity(int p, unsigned int queue): Priority(((1.0 / p) * (IDLE - 2)) + 1 ) {
+			_queue = queue;
+		}
+
+		static unsigned int current_queue() { return Machine::cpu_id(); }
+
+		const unsigned int queue() const { return _queue; }
+	};
 }
 
 
@@ -193,6 +226,32 @@ public:
         db<Scheduler>(TRC) << obj << endl;
 
         return obj;
+    }
+
+    unsigned int queue_min_size() const {
+		unsigned int min = -1;
+		unsigned int queue = -1;
+
+		for(unsigned int i = 0; i < Q; i++) {
+			if(min > Base::_list[i].size()){
+				min = Base::_list[i].size();
+				queue = i;
+			}
+		}
+		return queue;
+	}
+
+    T* get_idle(unsigned int queue = T::Criterion::current_queue()){
+    	Element* e = Base::_list[queue].tail();
+    	if(e && e->rank() == Criterion::IDLE){
+    		return e->object();
+    	} else {
+    		return chosen_from_list(queue);
+    	}
+    }
+
+    T* chosen_from_list(unsigned int list = T::Criterion::current_queue()){
+    	return Base::_list[list].chosen()->object();
     }
 };
 

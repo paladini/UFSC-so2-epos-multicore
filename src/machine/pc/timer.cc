@@ -22,6 +22,11 @@ void PC_Timer::int_handler(const Interrupt_Id & i)
         _channels[ALARM]->_handler(i);
     }
 
+   if(_channels[REBALANCER] && (--_channels[REBALANCER]->_current[Machine::cpu_id()] <= 0)){
+	   	_channels[REBALANCER]->_current[Machine::cpu_id()] = _channels[REBALANCER]->_initial;
+    	_channels[REBALANCER]->_handler(i);
+    }
+
     if((!Traits<System>::multicore || (Traits<System>::multicore && (Machine::cpu_id() == 0))) && _channels[USER]) {
         if(_channels[USER]->_retrigger)
             _channels[USER]->_current[0] = _channels[USER]->_initial;

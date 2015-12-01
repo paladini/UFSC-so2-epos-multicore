@@ -17,6 +17,8 @@ void Thread::init()
     if(Criterion::timed)
         _timer = new (SYSTEM) Scheduler_Timer(QUANTUM, time_slicer);
 
+    _rebalancer_timer = new (SYSTEM) Rebalancer_Timer(REBALANCER_QUANTUM, rebalance_handler);
+
     IC::int_vector(IC::INT_RESCHEDULER, reschedule_handler);
     IC::enable(IC::INT_RESCHEDULER);
 
