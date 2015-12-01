@@ -980,10 +980,10 @@ class Relative_List: public Ordered_List<T, R, El, true> {};
 template<typename T,
           typename R = typename T::Criterion,
           typename El = List_Elements::Doubly_Linked_Scheduling<T, R> >
-class Scheduling_List: private Ordered_List<T, R, El>
+class Scheduling_List: private Relative_List<T, R, El>
 {
 private:
-    typedef Ordered_List<T, R, El> Base;
+    typedef Relative_List<T, R, El> Base;
 
 public:
     typedef T Object_Type;
@@ -1205,20 +1205,6 @@ public:
     bool empty() const { return _list[R::current_queue()].empty(); }
 
     unsigned int size() const { return _list[R::current_queue()].size(); }
-
-    unsigned int queue_min_size() const {
-		unsigned int min = -1;
-		unsigned int queue = -1;
-
-		for(unsigned int i = 0; i < Q; i++) {
-			if(min > _list[i].size()){
-				min = _list[i].size();
-				queue = i;
-			}
-        }
-        
-		return queue;
-    }
 
     unsigned int total_size() const {
         unsigned int s = 0;

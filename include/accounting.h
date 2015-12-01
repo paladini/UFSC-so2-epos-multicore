@@ -108,7 +108,7 @@ public:
 	T wait_history_media(){
 		T media = 0;
 		unsigned int length = (_wait_history_pointer < MAX_HISTORY) ? _wait_history_pointer : MAX_HISTORY; 
-		for (int i = 0; i < length; i++) {
+		for (unsigned int i = 0; i < length; i++) {
 			media += _wait_history[i];
 		}
 		return media / length;
@@ -126,7 +126,7 @@ public:
 	T runtime_history_media() {
 		T media = 0;
 		unsigned int length = (_runtime_history_pointer < MAX_HISTORY) ? _runtime_history_pointer : MAX_HISTORY; 
-		for (int i = 0; i < length; i++) {
+		for (unsigned int i = 0; i < length; i++) {
 			media += _runtime_history[i];
 		}
 		return media / length;

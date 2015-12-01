@@ -15,6 +15,7 @@ __BEGIN_SYS
 // Class attributes
 volatile unsigned int Thread::_thread_count;
 Scheduler_Timer * Thread::_timer;
+Rebalancer_Timer * Thread::_rebalancer_timer;
 Scheduler<Thread> Thread::_scheduler;
 Spin Thread::_lock;
 Thread::List Thread::toSuspend[Thread::Criterion::QUEUES];
@@ -377,18 +378,20 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
 
         db<Thread>(TRC) << "Thread::dispatch(prev=" << prev << ",next=" << next << ")" << endl;
 
-        // Accounting the waiting time.
-        next->stats.wait_cron_stop();
-        prev->stats.wait_cron_start();
-
         // Accounting the runtime.
+        prev->stats.wait_cron_start();
         prev->stats.runtime_cron_stop();
-        // statistics only
         prev->stats.last_runtime(prev->stats.runtime_cron_ticks()); // updating last_runtime + total_runtime
+
+        next->stats.wait_cron_stop();
+        if(next->criterion() != IDLE) {
+        	next->link()->rank(Criterion(next->stats.wait_history_media(), next->queue()));
+        }
+
         next->stats.runtime_cron_start();
 
-        // db<Thread>(TRC) << "[prev!=next] TID: " << prev << " | Wait Media: " << prev->stats.wait_history_media() << " | Runtime Media: " << 
-            // prev->stats.runtime_history_media() << " | State: " << prev->_state << endl;
+        db<Thread>(TRC) << "[prev!=next] TID: " << prev << " | Wait Media: " << prev->stats.wait_history_media() << " | Runtime Media: " <<
+            prev->stats.runtime_history_media() << " | State: " << prev->_state << endl;
 
         if(smp)
             _lock.release();
@@ -399,6 +402,48 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
             _lock.release();
 
     CPU::int_enable();
+}
+
+void Thread::rebalance_handler(const IC::Interrupt_Id & i)
+{
+	 lock();
+	 if(_scheduler.size() <= 1){
+		unlock();
+	 	return;
+	 }
+
+	 Count my_idle = _scheduler.get_idle()->stats.runtime_history_media();
+	 Count max = 0;
+	 unsigned int queue = 0;
+	 for(unsigned int i = 0; i < Criterion::QUEUES; i++){
+	 	if(Machine::cpu_id() != i){
+	 		Count aux = _scheduler.get_idle(i)->stats.runtime_history_media();
+	 		if(aux > max){
+	 			max = aux;
+	 			queue = i;
+	 		}
+	 	}
+	 }
+
+	 //maior distancia entre my_idle e max menor a porcentagem
+	 if((double)my_idle / (double)max <= 0.5){
+	 	S_Element* aux = _scheduler.head();
+	 	Thread* chosen = 0;
+	 	max = 0;
+	 	do{
+	 		Count temp = aux->object()->stats.wait_history_media();
+	 		if(aux->object()->criterion() != IDLE && temp > max){
+				chosen = aux->object();
+				max = temp;
+	 		}
+	 		aux = aux->next();
+	 	}while(!aux);
+
+	 	chosen->link()->rank(Criterion(max, queue));
+	 	_scheduler.insert(chosen);
+		db<void>(TRC) << "re running: " << running() << " prev: " << chosen << " q: " << Machine::cpu_id() << " nq: " << chosen->queue() << endl;
+	 }
+	 unlock();
 }
 
 

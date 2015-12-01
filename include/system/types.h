@@ -91,6 +91,7 @@ namespace Scheduling_Criteria
     class FCFS;
     class RR;
     template<typename> class CpuAffinity;
+    template<typename> class CFSAffinity;
 };
 
 class Address_Space;
