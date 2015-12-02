@@ -10,7 +10,7 @@
 
 using namespace EPOS;
 
-const int iterations = 55;
+const int iterations = 20;
 const int time = 250;
 const int ms = 1000000;
 

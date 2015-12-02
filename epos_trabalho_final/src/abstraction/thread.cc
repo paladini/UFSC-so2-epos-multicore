@@ -399,7 +399,7 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
         prev->stats.last_runtime(prev->stats.runtime_cron_ticks()); // updating last_runtime + total_runtime
 
         next->stats.wait_cron_stop();
-        if(next->criterion() != IDLE) {
+        if (next->criterion() != IDLE) {
         	Count p = next->stats.wait_history_media();
         	unsigned int aux = Criterion::calculate_priority(p);
         	db<Thread>(TRC) << "Thread::dispatch: " << aux << endl;
@@ -428,20 +428,20 @@ void Thread::rebalance_handler(const IC::Interrupt_Id & i)
 	 }
 
 	 Count my_idle = _scheduler.get_idle()->stats.runtime_history_media();
-	 db<Thread>(TRC) << "re start fiuq: " << _scheduler.get_idle()->criterion() << endl;
+	 // db<Thread>(TRC) << "re start fiuq: " << _scheduler.get_idle()->criterion() << endl;
 	 Count max_idle = 0;
 	 unsigned int queue = 0;
 	 for(unsigned int i = 0; i < Criterion::QUEUES; i++){
 	 	if(Machine::cpu_id() != i){
 	 		Count aux = _scheduler.get_idle(i)->stats.runtime_history_media();
-	 		db<Thread>(TRC) << "re start fiuq2: " << _scheduler.get_idle(i) << " c: " << _scheduler.get_idle(i)->criterion() << endl;
+	 		// db<Thread>(TRC) << "re start fiuq2: " << _scheduler.get_idle(i) << " c: " << _scheduler.get_idle(i)->criterion() << endl;
 	 		if(aux > max_idle){
 	 			max_idle = aux;
 	 			queue = i;
 	 		}
 	 	}
 	 }
-	 db<Thread>(TRC) << "re start fiuq 2" << endl;
+	 // db<Thread>(TRC) << "re start fiuq 2" << endl;
 
 	 //maior distancia entre my_idle e max_idle menor a porcentagem
 	 if((double)my_idle / ((double)max_idle + 1) <= 0.80){
@@ -457,11 +457,11 @@ void Thread::rebalance_handler(const IC::Interrupt_Id & i)
 	 		aux = aux->next();
 	 	}while(!aux);
 
-	 	db<Thread>(TRC) << "re: q " << chosen->queue() << endl;
+	 	// db<Thread>(TRC) << "re: q " << chosen->queue() << endl;
 	 	_scheduler.remove(chosen);
 	 	chosen->link()->rank(Criterion(Criterion::calculate_priority(max) , queue));
 	 	_scheduler.insert(chosen);
-		db<Thread>(TRC) << "re running: " << running() << " prev: " << chosen << " cri: " << chosen->criterion() << " q: " << Machine::cpu_id() << " nq: " << chosen->queue() << endl;
+		// db<Thread>(TRC) << "re running: " << running() << " prev: " << chosen << " cri: " << chosen->criterion() << " q: " << Machine::cpu_id() << " nq: " << chosen->queue() << endl;
 	 }
 	 unlock();
 }
