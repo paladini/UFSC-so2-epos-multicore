@@ -32,7 +32,7 @@ public:
 			// If EPOS is not a kernel, then adjust the application entry point to __epos_app_entry,
 			// which will directly call main(). In this case, _init will have already been called,
 			// before Init_Application, to construct main()'s global objects.
-			first = new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::MAIN), reinterpret_cast<int (*)()>(__epos_app_entry));
+			first = new (SYSTEM) Thread(Thread::Configuration(Thread::RUNNING, Thread::NORMAL), reinterpret_cast<int (*)()>(__epos_app_entry));
 
 			// Idle thread creation must succeed main, thus avoiding implicit rescheduling
 			new (SYSTEM) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);

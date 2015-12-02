@@ -27,17 +27,17 @@ void Thread::constructor_prolog(unsigned int stack_size)
 
     _thread_count++;
     if(this->criterion() != IDLE) {
-//    	if(_scheduler.size() >= 1){
-//			Count aux = 0;
-//			if(running()->criterion() == IDLE) {
-//				aux = _scheduler.head()->object()->stats.wait_history_media();
-//			} else {
-//				aux = running()->stats.wait_history_media();
-//			}
-//			_link.rank(Criterion(Criterion::calculate_priority(aux), this->queue()));
-//    	} else {
-			_link.rank(Criterion(100, this->queue()));
-//    	}
+    	if(_scheduler.size() >= 1) {
+			Count aux = 0;
+			if(running()->criterion() == IDLE) {
+				aux = _scheduler.head()->object()->stats.wait_history_media();
+			} else {
+				aux = running()->stats.wait_history_media();
+			}
+			_link.rank(Criterion(Criterion::calculate_priority(aux), this->queue()));
+    	} else {
+			_link.rank(Criterion(Criterion::INTERVAL_NORMALIZED / 2, this->queue()));
+    	}
     }
     _scheduler.insert(this);
 
@@ -444,7 +444,7 @@ void Thread::rebalance_handler(const IC::Interrupt_Id & i)
 	 db<Thread>(TRC) << "re start fiuq 2" << endl;
 
 	 //maior distancia entre my_idle e max_idle menor a porcentagem
-	 if((double)my_idle / ((double)max_idle + 1) <= 0.75){
+	 if((double)my_idle / ((double)max_idle + 1) <= 0.80){
 	 	S_Element* aux = _scheduler.head();
 	 	Thread* chosen = 0;
 	 	Count max = 0;

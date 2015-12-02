@@ -109,10 +109,11 @@ namespace Scheduling_Criteria
 	{
 	public:
 		enum {
-			MAIN   = 0,
 			NORMAL = 1,
 			IDLE   = (unsigned(1) << (sizeof(int) * 8 - 1)) - 1
 		};
+
+		static const unsigned int INTERVAL_NORMALIZED = IDLE - 1000000000;
 
 		static const bool timed = true;
 		static const bool dynamic = false;
@@ -135,7 +136,7 @@ namespace Scheduling_Criteria
 		static unsigned int current_queue() { return Machine::cpu_id(); }
 
 		static unsigned int calculate_priority(unsigned long long value) {
-			return ((1.0 / value) * (IDLE - 600000000)) + 1;
+			return ((1.0 / value) * (INTERVAL_NORMALIZED)) + 1;
 		}
 
 		const unsigned int queue() const { return _queue; }

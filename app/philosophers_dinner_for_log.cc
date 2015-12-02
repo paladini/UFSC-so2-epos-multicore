@@ -10,7 +10,9 @@
 
 using namespace EPOS;
 
-const int iterations = 35;
+const int iterations = 55;
+const int time = 250;
+const int ms = 1000000;
 
 Mutex table;
 
@@ -39,7 +41,7 @@ int philosopher(int n, int l, int c)
         cout << "Philosopher # "<< n << " is thinking on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
-        countDelay(100);
+        countDelay(time);
 
         chopstick[first]->p();   // get first chopstick
         chopstick[second]->p();   // get second chopstick
@@ -48,7 +50,7 @@ int philosopher(int n, int l, int c)
         cout << "Philosopher # "<< n << " is eating on CPU# " << Machine::cpu_id() << endl;
         table.unlock();
 
-        countDelay(100);
+        countDelay(time);
 
         chopstick[first]->v();   // release first chopstick
         chopstick[second]->v();   // release second chopstick
@@ -100,11 +102,11 @@ int main()
 
         cout << "Philosopher " << i << "  ";
         for (int cpu_id = 0; cpu_id < Traits<Build>::CPUS; cpu_id++) {
-            Count ts_per_cpu = phil[i]->runtime_at(cpu_id);
+            Count ts_per_cpu = phil[i]->runtime_at(cpu_id) / ms;
             thread_runtime += ts_per_cpu;
-            cout << "| " << cpu_id << ": " << ts_per_cpu << "  ";
+            cout << "| " << cpu_id << ": " << ts_per_cpu  << "  ";
         }
-        cout << "| T: " << thread_runtime << endl;
+        cout << "| T: " << thread_runtime  << endl;
         
     }
 
